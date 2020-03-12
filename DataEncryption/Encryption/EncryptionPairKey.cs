@@ -101,7 +101,7 @@ namespace RSAEncryption.Encryption
 
             using (var rsa = new RSACryptoServiceProvider(this.KeySize))
             {
-                rsa.ImportParameters(this.ToRSAParameters(includePrivate));
+                rsa.ImportParameters(this.ExportToRSAParameters(includePrivate));
                 if (includePrivate)
                 {
                     string fileContent = rsa.ExportPrivateKey();
@@ -219,7 +219,7 @@ namespace RSAEncryption.Encryption
             {
                 try
                 {
-                    RSAParameters rsaParams = ToRSAParameters(includePrivate);
+                    RSAParameters rsaParams = ExportToRSAParameters(includePrivate);
 
                     rsa.ImportParameters(rsaParams);
                     var blob = rsa.ExportCspBlob(includePrivate);

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "RSAEncryption": {
+      "commandName": "Project",
+      "commandLineArgs": "-d --target=\"C:\\GitHub\\RSAEncryption\\DataEncryption\\bin\\Debug\\netcoreapp3.1\\See-You-Again-Easy-Piano-Sheet-Music-Charlie-Puth-(SheetMusic-Free-com).encrypted.pdf\" --privatekey=C:\\Users\\gabri\\Documents\\privkey.pem --verbose"
+    }
+  }
+}
