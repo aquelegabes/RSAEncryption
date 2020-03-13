@@ -15,11 +15,12 @@ namespace RSAEncryption.Encryption
     {
         /// <summary>
         /// Encrypts a file using a <see cref="RSACryptoServiceProvider"/> public key.
+        /// In combination with <see cref="RijndaelManaged"/>.
         /// </summary>
         /// <param name="file">Bytes from the file.</param>
         /// <param name="publicKey"></param>
         /// <returns></returns>
-        public static byte[] FileEncrypt(byte[] file, EncryptionPairKey publicKey)
+        public static byte[] EncryptFile(byte[] file, EncryptionPairKey publicKey)
         {
             // Importing 
             using var rsa = new RSACryptoServiceProvider();
@@ -87,11 +88,12 @@ namespace RSAEncryption.Encryption
 
         /// <summary>
         /// Decrypts a file using a <see cref="RSACryptoServiceProvider"/> private key.
+        /// In combination with <see cref="RijndaelManaged"/>.
         /// </summary>
         /// <param name="file">Bytes from the file.</param>
         /// <param name="privateKey"></param>
         /// <returns></returns>
-        public static byte[] FileDecrypt(byte[] encryptedFile, EncryptionPairKey privateKey)
+        public static byte[] DecryptFile(byte[] encryptedFile, EncryptionPairKey privateKey)
         {
             // Importing 
             using var rsa = new RSACryptoServiceProvider();
@@ -199,25 +201,11 @@ namespace RSAEncryption.Encryption
         /// <exception cref="ArgumentNullException">Any of the parameters are null</exception>
         /// <exception cref="MissingFieldException">Missing fields on key.</exception>
         /// <exception cref="CryptographicException">Invalid key.</exception>
-        public static byte[] EncryptText(byte[] data, EncryptionPairKey publicKey)
+        public static byte[] Encrypt(byte[] data, EncryptionPairKey publicKey)
         {
-            return EncryptText(new List<byte[]> { data }, publicKey).First();
-        }
-
-        /// <summary>
-        /// Encrypts data with the <see cref="System.Security.Cryptography.RSA" /> algorithm.
-        /// </summary>
-        /// <returns></returns>
-        /// <param name="data">The data to be encrypted.</param>
-        /// <param name="publicKey">The public key to encrypt with.</param>
-        /// <exception cref="ArgumentNullException">Any of the parameters are null</exception>
-        /// <exception cref="MissingFieldException">Missing fields on key.</exception>
-        /// <exception cref="CryptographicException">Invalid key.</exception>
-        public static ICollection<byte[]> EncryptText(ICollection<byte[]> data, EncryptionPairKey publicKey)
-        {
-            if (data?.Count == 0)
+            if (data == null)
                 throw new ArgumentNullException(
-                    message: "At least one message is required.",
+                    message: "Data to be encrypted must not be null.",
                     paramName: nameof(data)
                 );
 
@@ -234,13 +222,9 @@ namespace RSAEncryption.Encryption
                 try
                 {
                     var rsaParams = publicKey.ExportToRSAParameters(false);
-                    var encryptedCollection = new List<byte[]>();
                     rsa.ImportParameters(rsaParams);
 
-                    foreach (var msg in data)
-                        encryptedCollection.Add(rsa.Encrypt(msg, false));
-
-                    return encryptedCollection;
+                    return rsa.Encrypt(data, false);
                 }
                 catch (ArgumentNullException ex)
                 {
@@ -273,7 +257,7 @@ namespace RSAEncryption.Encryption
         /// Computes the hash value of the specified collection of byte array using the specified hash algorithm, and signs the resulting hash value.
         /// </summary>
         /// <param name="encryptedData">The data encrypted.</param>
-        /// <param name="publicKey">The public key.</param>
+        /// <param name="privateKey">The private key.</param>
         /// <param name="hashAlgorithmName">Any of the hash Algorithm Name example: SHA1</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">Any of the parameters are null</exception>
@@ -281,24 +265,9 @@ namespace RSAEncryption.Encryption
         /// <exception cref="CryptographicException">Invalid key.</exception>
         public static byte[] SignData(byte[] encryptedData, EncryptionPairKey privateKey, string hashAlgorithmName)
         {
-            return SignData(new List<byte[]> { encryptedData }, privateKey, hashAlgorithmName).First();
-        }
-
-        /// <summary>
-        /// Computes the hash value of the specified collection of byte array using the specified hash algorithm, and signs the resulting hash value.
-        /// </summary>
-        /// <param name="encryptedData">The data encrypted.</param>
-        /// <param name="privateKey">The private key.</param>
-        /// <param name="hashAlgorithmName">Any of the hash Algorithm Name example: SHA1</param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentNullException">Any of the parameters are null</exception>
-        /// <exception cref="MissingFieldException">Missing fields on key.</exception>
-        /// <exception cref="CryptographicException">Invalid key.</exception>
-        public static ICollection<byte[]> SignData(ICollection<byte[]> encryptedData, EncryptionPairKey privateKey, string hashAlgorithmName)
-        {
-            if (encryptedData?.Count == 0)
+            if (encryptedData == null)
                 throw new ArgumentNullException(
-                    message: "At least one data must be available.",
+                    message: "Encrypted data must not be null.",
                     paramName: nameof(encryptedData)
                 );
 
@@ -313,14 +282,9 @@ namespace RSAEncryption.Encryption
                 try
                 {
                     var rsaParams = privateKey.ExportToRSAParameters(true);
-                    var signedData = new List<byte[]>();
 
                     rsa.ImportParameters(rsaParams);
-
-                    foreach (var data in encryptedData)
-                        signedData.Add(rsa.SignData(data, CryptoConfig.MapNameToOID(hashAlgorithmName)));
-
-                    return signedData;
+                    return rsa.SignData(encryptedData, CryptoConfig.MapNameToOID(hashAlgorithmName));
                 }
                 catch (ArgumentNullException ex)
                 {
@@ -362,26 +326,10 @@ namespace RSAEncryption.Encryption
         /// <exception cref="CryptographicException">Invalid key.</exception>
         public static bool VerifySignedData(byte[] dataToBeSigned, byte[] signedData, EncryptionPairKey publicKey, string hashAlgorithmName)
         {
-            return VerifySignedData(new List<byte[]> { dataToBeSigned }, new List<byte[]> { signedData }, publicKey, hashAlgorithmName);
-        }
-
-        /// <summary>
-        /// Verifies that a digital signature is valid by determining the hash value in the signature using the provided public key and comparing it to the hash value of the provided data.
-        /// </summary>
-        /// <param name="dataToBeSigned">The data that was signed.</param>
-        /// <param name="signedData">The signature data to be verified.</param>
-        /// <param name="publicKey">The public key.</param>
-        /// <param name="hashAlgorithmName">Any of the hash Algorithm Name example: SHA1</param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentNullException">Any of the parameters are null</exception>
-        /// <exception cref="MissingFieldException">Missing fields on key.</exception>
-        /// <exception cref="CryptographicException">Invalid key.</exception>
-        public static bool VerifySignedData(ICollection<byte[]> dataToBeSigned, ICollection<byte[]> signedData, EncryptionPairKey publicKey, string hashAlgorithmName)
-        {
-            if (dataToBeSigned?.Count == 0
-                || signedData?.Count == 0)
+            if (dataToBeSigned == null
+                || signedData == null)
                 throw new ArgumentNullException(
-                    message: "At least one data must be available.",
+                    message: "Both signed data and encrypted data must not be null.",
                     paramName: $"Params: [ {nameof(dataToBeSigned)}, {nameof(signedData)} ]"
                 );
 
@@ -391,9 +339,6 @@ namespace RSAEncryption.Encryption
                     paramName: nameof(publicKey)
                 );
 
-            if (dataToBeSigned.Count != signedData.Count)
-                return false;
-
             using (var rsa = new RSACryptoServiceProvider(publicKey.KeySize))
             {
                 try
@@ -401,14 +346,8 @@ namespace RSAEncryption.Encryption
                     var rsaParams = publicKey.ExportToRSAParameters(false);
                     rsa.ImportParameters(rsaParams);
 
-                    var toBeSigned = dataToBeSigned.ToList();
-                    var signed = signedData.ToList();
-
-                    for (int i = 0; i < dataToBeSigned.Count; i++)
-                    {
-                        if (!rsa.VerifyData(toBeSigned[i], CryptoConfig.MapNameToOID(hashAlgorithmName), signed[i]))
-                            return false;
-                    }
+                    if (!rsa.VerifyData(dataToBeSigned, CryptoConfig.MapNameToOID(hashAlgorithmName), signedData))
+                        return false;
 
                     return true;
                 }
@@ -448,25 +387,11 @@ namespace RSAEncryption.Encryption
         /// <exception cref="ArgumentNullException">Any of the parameters are null</exception>
         /// <exception cref="MissingFieldException">Missing fields on key.</exception>
         /// <exception cref="CryptographicException">Invalid key.</exception>
-        public static byte[] DecryptText(byte[] encryptedData, EncryptionPairKey privateKey)
+        public static byte[] Decrypt(byte[] encryptedData, EncryptionPairKey privateKey)
         {
-            return DecryptText(new List<byte[]> { encryptedData }, privateKey).First();
-        }
-
-        /// <summary>
-        /// Decrypt data with the <see cref="System.Security.Cryptography.RSA" /> algorithm.
-        /// </summary>
-        /// <param name="encryptedData">Encrypted data.</param>
-        /// <param name="privateKey">Private key.</param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentNullException">Any of the parameters are null</exception>
-        /// <exception cref="MissingFieldException">Missing fields on key.</exception>
-        /// <exception cref="CryptographicException">Invalid key.</exception>
-        public static ICollection<byte[]> DecryptText(ICollection<byte[]> encryptedData, EncryptionPairKey privateKey)
-        {
-            if (encryptedData?.Count == 0)
+            if (encryptedData == null)
                 throw new ArgumentNullException(
-                    message: "At least one data must be available.",
+                    message: "Data to decrypt must not be null.",
                     paramName: nameof(encryptedData)
                 );
 
@@ -481,13 +406,9 @@ namespace RSAEncryption.Encryption
                 try
                 {
                     var rsaParams = privateKey.ExportToRSAParameters(true);
-                    var decryptedData = new List<byte[]>();
                     rsa.ImportParameters(rsaParams);
 
-                    foreach (var data in encryptedData)
-                        decryptedData.Add(rsa.Decrypt(data, false));
-
-                    return decryptedData;
+                    return rsa.Decrypt(encryptedData, false);
                 }
                 catch (ArgumentNullException ex)
                 {

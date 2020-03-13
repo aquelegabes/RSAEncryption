@@ -10,7 +10,7 @@ namespace RSAEncryption
 {
     class Program
     {
-        static Stopwatch Stopwatch = new Stopwatch();
+        static readonly Stopwatch Stopwatch = new Stopwatch();
         static readonly string exeName = Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
         static string hashalg = "SHA256";
 
@@ -18,6 +18,7 @@ namespace RSAEncryption
         {
             bool verbose = false;
             bool help = false;
+            bool examples = false;
             bool encrypt = false;
             bool decrypt = false;
             bool sign = false;
@@ -27,7 +28,7 @@ namespace RSAEncryption
 
             var opts = new OptionSet
             {
-                { "nk|newkey=", "generates a new RSA Key with specified key size, default size is 2048bits",
+                { "newkey=", "generates a new RSA Key with specified key size, default size is 2048bits, exports public and private separetly",
                    (int v) => newKey = v },
                 { "e|encrypt", "encrypts the data",
                     v => encrypt = v != null },
@@ -35,44 +36,60 @@ namespace RSAEncryption
                     v => decrypt = v != null },
                 { "s|sign", "signs the encrypted data, requires private key",
                     v => sign = v != null },
-                { "vs|verifysignature", "verify if signed data is trustworthy",
+                { "v|verifysignature", "verify if signed data is trustworthy",
                     v => verifySignature = v != null },
-                { "sf|signaturefile=", "signature file generated along side with its encryption",
+                { "verbose", "increase debug message verbosity",
+                    v => verbose = v != null },
+                { "h|help", "show this message and exit",
+                    v => help = v != null },
+                { "x|examples", "show specific examples",
+                    v => examples = v != null },
+                { "hashalg=", "type of hashing algorithm, examples: SHA1, SHA256. default value is SHA256",
+                    v => hashalg = v },
+                { "signaturefile=", "signature file generated along side with its encryption",
                     v => argsValue.Add("signaturefile", v) },
                 { "t|target=", "file or directory to be encrypted, decrypted or to verify its signature if directory encrypts all file from that directory",
                     v => argsValue.Add("target",v) },
                 { "o|output=", "path to output encrypted files",
                     v => argsValue.Add("output",v) },
-                { "pbk|publickey=", "path where public key is stored (.pem file)",
+                { "publickey=", "path where public key is stored (.pem file)",
                     v => argsValue.Add("publickey",v) },
-                { "pvk|privatekey=", "path where private key is stored (.pem file)",
+                { "privatekey=", "path where private key is stored (.pem file)",
                     v => argsValue.Add("privatekey",v) },
-                { "v|verbose", "increase debug message verbosity",
-                    v => verbose = v != null },
-                { "h|help", "show this message and exit",
-                    v => help = v != null },
-                { "hg|hashalg=", "type of hashing algorithm, examples: SHA1, SHA256. default value is SHA256",
-                    v => hashalg = v },
             };
             var extra = new List<string>();
             try
             {
                 extra = opts.Parse(args);
 
-                var output = argsValue.ContainsKey("output") ? argsValue["output"] : Environment.CurrentDirectory;
-                bool isPublic = argsValue.ContainsKey("publickey");
-                var pathKey = isPublic ? argsValue["publickey"] : argsValue["privatekey"];
-                var key = EncryptionPairKey.ImportFromFile(pathKey, !isPublic);
-                hashalg = string.IsNullOrWhiteSpace(hashalg) ? "SHA256" : hashalg.ToUpper();
-
                 if (help)
                 {
                     ShowHelp(opts);
                     return;
                 }
+
+                if (examples)
+                {
+                    ShowExamples(opts);
+                    return;
+                }
+
+                var output = argsValue.ContainsKey("output") ? argsValue["output"] : Environment.CurrentDirectory;
+                bool isPublic = argsValue.ContainsKey("publickey");
+                var pathKey = isPublic ? argsValue["publickey"] : argsValue.ContainsKey("privatekey") ? argsValue["privatekey"] : "";
+                var key = !string.IsNullOrWhiteSpace(pathKey) ? EncryptionPairKey.ImportFromFile(pathKey, !isPublic) : null;
+                
+                hashalg = string.IsNullOrWhiteSpace(hashalg) ? "SHA256" : hashalg.ToUpper();
+
+                Console.WriteLine($"[*] Starting {exeName}...");
                 if (encrypt)
                 {
                     Encrypt(argsValue["target"], sign, key, verbose, output);
+                    return;
+                }
+                if (sign && !encrypt)
+                {
+                    Sign(argsValue["target"], key, output, verbose);
                     return;
                 }
                 if (verifySignature)
@@ -85,20 +102,103 @@ namespace RSAEncryption
                     Decrypt(argsValue["target"], key, output, verbose);
                     return;
                 }
+                if (newKey != -1)
+                {
+                    if (newKey < 0)
+                        throw new ArgumentException(
+                            message: "Key size must not be negative.",
+                            paramName: nameof(newKey));
+
+                    if (verbose)
+                    {
+                        Console.WriteLine("[*] Generating RSA key...");
+                        Stopwatch.Restart();
+                    }
+                    var keyNew = EncryptionPairKey.New(newKey);
+                    if (verbose)
+                    {
+                        Stopwatch.Stop();
+                        Console.WriteLine($"[*] Elapsed time for generating new RSA key {Stopwatch.ElapsedMilliseconds} ms");
+                        Console.WriteLine("[*] Exporting public key...");
+                    }
+                    keyNew.ExportToFile(output, false);
+                    if (verbose)
+                        Console.WriteLine("[*] Exporting private key...");
+                    keyNew.ExportToFile(output, true);
+
+                    Console.WriteLine($"[*] Key generated and exported to {output}");
+                    Console.WriteLine("[*] as pubkey.pem and privkey.pem");
+                }
             }
             catch (OptionException e)
             {
                 Console.Write($"{exeName}: ");
                 Console.WriteLine(e.Message.Contains("inner") ?  e.InnerException.Message :  e.Message);
-                Console.WriteLine($"Try '{exeName} --help' for more information");
+                Console.WriteLine($"Try '{exeName} --help' for more information or --examples");
                 return;
             }
             catch (Exception e)
             {
                 Console.Write($"[*] {exeName}: ");
                 Console.WriteLine(e.Message.Contains("inner") ? e.InnerException.Message : e.Message);
-                Console.WriteLine($"[*] Try '{exeName} --help' for more information");
+                Console.WriteLine($"[*] Try '{exeName} --help' for more information or --examples");
                 return;
+            }
+        }
+
+        static void Sign(string target, EncryptionPairKey key, string output, bool verbose)
+        {
+            if (string.IsNullOrWhiteSpace(output))
+                output = Environment.CurrentDirectory;
+            else if (!Directory.Exists(output))
+                throw new ArgumentException(
+                    message: "Invalid directory path.",
+                    paramName: nameof(output));
+
+            if (string.IsNullOrWhiteSpace(target))
+                throw new ArgumentNullException(
+                    message: "Target cannot be null.",
+                    paramName: nameof(target));
+
+            if (key.Private == null)
+                throw new ArgumentNullException(
+                    message: "In order to decrypt data, private key must not be null.",
+                    paramName: nameof(key));
+
+            Console.WriteLine("[*] Warning: Target file must be the encrypted and not the original to sign correctly");
+
+            if (File.Exists(target))
+            {
+                string fileName = Path.GetFileNameWithoutExtension(target);
+                fileName = fileName.Replace(".encrypted", "");
+                string fileExt = Path.GetExtension(target);
+
+                if (verbose)
+                    Console.WriteLine("[*] Storing file in memory...");
+
+                FileManipulation.OpenFile(target, out var file);
+
+                if (verbose)
+                {
+                    Console.WriteLine("[*] File in memory...");
+                    Console.WriteLine("[*] Signing file...");
+                    Stopwatch.Restart();
+                }
+                var signedData = RSAMethods.SignData(file, key, hashalg);
+
+                if (verbose)
+                {
+                    Stopwatch.Stop();
+                    Console.WriteLine($"[*] Elapsed time for signing {Stopwatch.ElapsedMilliseconds} ms");
+                    Console.WriteLine("[*] Saving file...");
+                }
+
+                FileManipulation.SaveFile(signedData, output, $"{fileName}.signature{fileExt}", true);
+                Console.WriteLine($"[*] File saved as \"{fileName}.signature{fileExt}\" at {output}");
+            }
+            else
+            {
+                throw new ArgumentException(message: "Target path is non-existent.");
             }
         }
 
@@ -115,6 +215,11 @@ namespace RSAEncryption
                 throw new ArgumentNullException(
                     message: "Target cannot be null.",
                     paramName: nameof(target));
+
+            if (key.Private == null)
+                throw new ArgumentNullException(
+                    message: "In order to decrypt data, private key must not be null.",
+                    paramName: nameof(key));
             else
             {
                 if (File.Exists(target))
@@ -136,7 +241,7 @@ namespace RSAEncryption
                         Console.WriteLine("[*] Starting decryption...");
                         Stopwatch.Restart();
                     }
-                    var decrypted = RSAMethods.FileDecrypt(file, key);
+                    var decrypted = RSAMethods.DecryptFile(file, key);
                     if (verbose)
                     {
                         Stopwatch.Stop();
@@ -169,7 +274,7 @@ namespace RSAEncryption
                             Console.WriteLine("[*] Starting decryption...");
                             Stopwatch.Restart();
                         }
-                        var decrypted = RSAMethods.FileDecrypt(file, key);
+                        var decrypted = RSAMethods.DecryptFile(file, key);
                         if (verbose)
                         {
                             Stopwatch.Stop();
@@ -198,6 +303,11 @@ namespace RSAEncryption
                 throw new ArgumentNullException(
                     message: "Signed data path cannot be null.",
                     paramName: nameof(signedDataPath));
+
+            if (key.Public == null)
+                throw new ArgumentNullException(
+                    message: "In order to verify signature, public key must not be null.",
+                    paramName: nameof(key));
 
             if (!File.Exists(originalDataPath) && !File.Exists(signedDataPath))
                 throw new ArgumentException(message: "Both of paths must exists.");
@@ -249,6 +359,11 @@ namespace RSAEncryption
                 throw new ArgumentNullException(
                     message: "Target cannot be null.",
                     paramName: nameof(target));
+
+            if (key.Public == null)
+                throw new ArgumentNullException(
+                    message: "In order to encrypt data, public key must not be null.",
+                    paramName: nameof(key));
             else
             {
                 if (File.Exists(target))
@@ -268,7 +383,7 @@ namespace RSAEncryption
                         Console.WriteLine("[*] Starting encryption...");
                         Stopwatch.Restart();
                     }
-                    var encrypted = RSAMethods.FileEncrypt(file, key);
+                    var encrypted = RSAMethods.EncryptFile(file, key);
                     if (verbose)
                     {
                         Stopwatch.Stop();
@@ -277,6 +392,16 @@ namespace RSAEncryption
 
                     if (sign)
                     {
+                        if (key.Private == null)
+                        {
+                            if (verbose)
+                                Console.WriteLine("[*] Saving file...");
+                            FileManipulation.SaveFile(encrypted, output, $"{fileName}.encrypted{fileExt}", true);
+                            Console.WriteLine($"[*] File saved as \"{fileName}.encrypted{fileExt}\" at {output}");
+                            throw new ArgumentNullException(
+                                message: "In order to sign encrypted data, private key must not be null.",
+                                paramName: nameof(key));
+                        }
                         if (verbose)
                         {
                             Console.WriteLine("[*] Signing encrypted data...");
@@ -319,7 +444,7 @@ namespace RSAEncryption
                             Console.WriteLine("[*] Starting encryption...");
                             Stopwatch.Restart();
                         }
-                        var encrypted = RSAMethods.FileEncrypt(file, key);
+                        var encrypted = RSAMethods.EncryptFile(file, key);
                         if (verbose)
                         {
                             Stopwatch.Stop();
@@ -360,16 +485,25 @@ namespace RSAEncryption
         static void ShowHelp(OptionSet opts)
         {
             Console.WriteLine($"Usage: {exeName} [OPTIONS]");
-            Console.WriteLine("Encrypts data from files or a specified directory.");
-            Console.WriteLine($"If no output is specified, the default output path is {Environment.CurrentDirectory}.");
-            Console.WriteLine("Recommendation is that files are no larger than 10mb");
-            Console.WriteLine();
-            Console.WriteLine($" Example 1: {exeName} -nk=4096 \n\t Generates a new RSAKey 4096 bits, outputs public and private key separetly to default output path");
-            Console.WriteLine($" Example 2: {exeName} -e -s -t=C:\\myfile.txt -o=.\\ -pbk=C:\\mypubkey.pem \n\t Encrypts and sign the specified file on the specified output with specified public key");
-            Console.WriteLine($" Example 3: {exeName} -d -t=C:\\myencryptedfile.txt -pvk=C:\\myprivatekey.pem \n\t Decrypts specified file using specified private key to default output path");
+            Console.WriteLine("Encrypts, decrypts, sign and verifies signature from files.");
+            Console.WriteLine("Note: When encrypting or decrypting --target can be used to specify a directory");
+            Console.WriteLine($"Note: If no output is specified, the default output path is {Environment.CurrentDirectory}.");
+            Console.WriteLine("Note: Recommendation is that files are no larger than 10mb, cause it'll take longer");
             Console.WriteLine();
             Console.WriteLine("Options:");
             opts.WriteOptionDescriptions(Console.Out);
+        }
+
+        static void ShowExamples(OptionSet opts)
+        {
+            ShowHelp(opts);
+            Console.Write("\n\n");
+            Console.WriteLine("Examples:\n");
+            Console.WriteLine($" Encrypting and signing: {exeName} -e -s --target=.\\myfile.pdf --publickey=.\\pubkey.pem\n\tEncrypts and sign the specified file using default output with specified public key");
+            Console.WriteLine($" Signing only: {exeName} --sign --target=.\\myfile.encrypted.docx --privatekey=.\\privkey.pem\n\tSigns the specified file using default output with specified private key");
+            Console.WriteLine($" Verifying signature: {exeName} -vs --target=.\\myfile.encrypted.txt --signaturefile=.\\myfile.signature.txt --publickey=.\\pubkey.pem\n\tChecks if signature file is valid");
+            Console.WriteLine($" Decrypting: {exeName} -d --target=.\\myfile.encrypted.pdf --output=.\\ --privatekey=.\\privkey.pem --verbose\n\tDecrypts specified file on specified output using selected key with increase verbosity");
+            Console.WriteLine($" Generating new key: {exeName} --newkey=4096 -o=.\\\n\tGenerates a new key with chosen size at selected path");
         }
     }
 }
