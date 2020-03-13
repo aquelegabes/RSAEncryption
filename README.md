@@ -1,10 +1,10 @@
 # RSA Encryption Console
-
 ## Usage: rsaencryption [OPTIONS]
-##### Encrypts, decrypts, sign and verifies signature on files.
-##### Note: When encrypting or decrypting --target can be used to specify a directory
-##### Note: If no output is specified, the default output path is Environment.CurrentDirectory
-##### Note: Recommendation is that files are no larger than 10mb, cause it'll take longer
+##### Encrypts, decrypts, sign and verifies signature on files. Encrypt files using Rijndael encryption algorithm with RSA keys.
+##### Note: When encrypting or decrypting ```--target``` can be used to specify a directory.
+##### Note: If no output is specified, the default output path is Environment.CurrentDirectory.
+##### Note: Recommendation is that files are no larger than 10mb, cause it'll take longer.
+##### Note: When using decrypt on a directory it searches for files that contains ```.encrypted``` on it's name.
 
 ### Options:
 ```
@@ -39,8 +39,7 @@
 ```
 ```
   --newkey=VALUE              generates a new RSA Key with specified key size,
-                                  default size is 2048bits, exports public and
-                                  private separetly
+                                  exports public and private separetly
 ```
 ```
   --publickey=VALUE           path where public key is stored (.pem file)
