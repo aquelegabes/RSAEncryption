@@ -49,7 +49,7 @@
                                   default value is SHA256
 ```
 ```
---keyfilename=VALUE           when generating a new key use this to choose file
+  --keyfilename=VALUE           when generating a new key use this to choose file
                                   name, default is "key"
 ```
 ```
