@@ -2,7 +2,7 @@
   "profiles": {
     "RSAEncryption": {
       "commandName": "Project",
-      "commandLineArgs": "-x"
+      "commandLineArgs": "-e -s --target=.\\original --privatekey=.\\privkey.pem --output=.\\encrypted --verbose"
     }
   }
 }
