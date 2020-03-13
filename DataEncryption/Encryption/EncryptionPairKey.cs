@@ -86,8 +86,12 @@ namespace RSAEncryption.Encryption
         /// Export this <see cref="EncryptionPairKey"/> into a file.
         /// </summary>
         /// <param name="path">Only path name. DO NOT include filename.</param>
+        /// <param name="filename">
+        /// Filename to export, if not specified it sets to pubkey or privkey adequately.
+        /// DO NOT include extension.
+        /// </param>
         /// <param name="includePrivate"></param>
-        public void ExportToFile(string path, bool includePrivate = false)
+        public void ExportToFile(string path, string filename = "key", bool includePrivate = false)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentNullException(
@@ -104,13 +108,15 @@ namespace RSAEncryption.Encryption
                 rsa.ImportParameters(this.ExportToRSAParameters(includePrivate));
                 if (includePrivate)
                 {
+                    filename = "priv." + filename + ".pem";
                     string fileContent = rsa.ExportPrivateKey();
-                    FileManipulation.SaveFile(fileContent.ToByteArray(), path, "privkey.pem");
+                    FileManipulation.SaveFile(fileContent.ToByteArray(), path, filename, attributes:FileAttributes.ReadOnly);
                 }
                 else
                 {
+                    filename = "pub." + filename + ".pem";
                     string fileContent = rsa.ExportPublicKey();
-                    FileManipulation.SaveFile(fileContent.ToByteArray(), path, "pubkey.pem");
+                    FileManipulation.SaveFile(fileContent.ToByteArray(), path, filename, attributes: FileAttributes.ReadOnly);
                 }
             }
         }

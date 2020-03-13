@@ -4,17 +4,18 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 namespace RSAEncryption
 {
-    class Program
+    public class Program
     {
         static readonly Stopwatch Stopwatch = new Stopwatch();
         static readonly string exeName = Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
         static string hashalg = "SHA256";
 
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             bool verbose = false;
             bool help = false;
@@ -24,31 +25,40 @@ namespace RSAEncryption
             bool sign = false;
             bool verifySignature = false;
             bool version = false;
+            bool action = false;
             int newKey = -1;
             var argsValue = new Dictionary<string, string>();
 
             var opts = new OptionSet
             {
-                { "e|encrypt", "encrypts the data",
-                    v => encrypt = v != null },
-                { "d|decrypt", "decrypts the encrypted data, requires private key",
-                    v => decrypt = v != null },
-                { "h|help", "show this message and exit",
-                    v => help = v != null },
+                // action
+                { "e|encrypt", "encrypts the data \n[ACTION]",
+                    v => { encrypt = v != null; action = true; } },
+                // action
+                { "d|decrypt", "decrypts the encrypted data, requires private key \n[ACTION]",
+                    v => { decrypt = v != null; action = true; } },
+                // action
+                { "h|help", "show this message and exit \n[ACTION]",
+                    v => { help = v != null; action = true; } },
                 { "o|output=", "path to output encrypted files",
                     v => argsValue.Add("output",v) },
-                { "s|sign", "signs the encrypted data, requires private key",
-                    v => sign = v != null },
+                // action
+                { "s|sign", "signs the encrypted data, requires private key \n[ACTION]",
+                    v => { sign = v != null; action = true; } },
                 { "t|target=", "file or directory to be encrypted, decrypted or to verify its signature if directory encrypts all file from that directory",
                     v => argsValue.Add("target",v) },
-                { "v|verifysignature", "verify if signed data is trustworthy",
-                    v => verifySignature = v != null },
-                { "x|examples", "show specific examples",
-                    v => examples = v != null },
+                // action
+                { "v|verifysignature", "verify if signed data is trustworthy \n[ACTION]",
+                    v => { verifySignature = v != null; action = true; } },
+                { "x|examples", "show specific examples \n[ACTION]",
+                    v => { examples = v != null; action = true; } },
                 { "hashalg=", "type of hashing algorithm, examples: SHA1, SHA256. default value is SHA256",
                     v => hashalg = v },
-                { "newkey=", "generates a new RSA Key with specified key size, default size is 2048bits, exports public and private separetly",
-                   (int v) => newKey = v },
+                { "keyfilename=", "when generating a new key use this to choose file name, default is \"key\"",
+                    v => argsValue.Add("keyfilename",v) },
+                // action
+                { "newkey=", "generates a new RSA Key with specified key size, default size is 2048bits, exports public and private separetly \n[ACTION]",
+                   (int v) => { newKey = v; action = true; } },
                 { "publickey=", "path where public key is stored (.pem file)",
                     v => argsValue.Add("publickey",v) },
                 { "privatekey=", "path where private key is stored (.pem file)",
@@ -57,14 +67,18 @@ namespace RSAEncryption
                     v => argsValue.Add("signaturefile", v) },
                 { "verbose", "increase debug message verbosity",
                     v => verbose = v != null },
-                { "version", "shows version",
-                    v => version = v != null },
+                // action
+                { "version", "shows version \n[ACTION]",
+                    v => { version = v != null; action = true; } },
             };
             var extra = new List<string>();
             try
             {
                 extra = opts.Parse(args);
-                if (help || args == null || extra.Count > 0)
+
+                // show help when no args, not defined opts
+                // missing action option, show help
+                if (help || args == null || extra.Count > 0 || !action)
                 {
                     ShowHelp(opts);
                     return;
@@ -130,10 +144,10 @@ namespace RSAEncryption
                         Console.WriteLine($"[*] Elapsed time for generating new RSA key {Stopwatch.ElapsedMilliseconds} ms");
                         Console.WriteLine("[*] Exporting public key...");
                     }
-                    keyNew.ExportToFile(output, false);
+                    keyNew.ExportToFile(output, includePrivate: false);
                     if (verbose)
                         Console.WriteLine("[*] Exporting private key...");
-                    keyNew.ExportToFile(output, true);
+                    keyNew.ExportToFile(output, includePrivate: true);
 
                     Console.WriteLine($"[*] Key generated and exported to {output}");
                     Console.WriteLine("[*] as pubkey.pem and privkey.pem");
@@ -155,7 +169,7 @@ namespace RSAEncryption
             }
         }
 
-        static void Sign(string target, EncryptionPairKey key, string output, bool verbose)
+        public static void Sign(string target, EncryptionPairKey key, string output, bool verbose)
         {
             if (string.IsNullOrWhiteSpace(output))
                 output = Environment.CurrentDirectory;
@@ -169,7 +183,7 @@ namespace RSAEncryption
                     message: "Target cannot be null.",
                     paramName: nameof(target));
 
-            if (key.Private == null)
+            if (key?.Private == null)
                 throw new ArgumentNullException(
                     message: "In order to decrypt data, private key must not be null.",
                     paramName: nameof(key));
@@ -211,7 +225,7 @@ namespace RSAEncryption
             }
         }
 
-        static void Decrypt(string target, EncryptionPairKey key, string output, bool verbose)
+        public static void Decrypt(string target, EncryptionPairKey key, string output, bool verbose)
         {
             if (string.IsNullOrWhiteSpace(output))
                 output = Environment.CurrentDirectory;
@@ -225,7 +239,7 @@ namespace RSAEncryption
                     message: "Target cannot be null.",
                     paramName: nameof(target));
 
-            if (key.Private == null)
+            if (key?.Private == null)
                 throw new ArgumentNullException(
                     message: "In order to decrypt data, private key must not be null.",
                     paramName: nameof(key));
@@ -303,24 +317,25 @@ namespace RSAEncryption
             }
         }
 
-        static void VerifySignature(string originalDataPath, string signedDataPath, EncryptionPairKey key, bool verbose)
+        public static void VerifySignature(string originalDataPath, string signedDataPath, EncryptionPairKey key, bool verbose)
         {
             if (string.IsNullOrWhiteSpace(originalDataPath))
                 throw new ArgumentNullException(
                     message: "Original data path cannot be null.",
                     paramName: nameof(originalDataPath));
+
             if (string.IsNullOrWhiteSpace(signedDataPath))
                 throw new ArgumentNullException(
                     message: "Signed data path cannot be null.",
                     paramName: nameof(signedDataPath));
 
-            if (key.Public == null)
+            if (key?.Public == null)
                 throw new ArgumentNullException(
                     message: "In order to verify signature, public key must not be null.",
                     paramName: nameof(key));
 
             if (!File.Exists(originalDataPath) && !File.Exists(signedDataPath))
-                throw new ArgumentException(message: "Both of paths must exists.");
+                throw new ArgumentException(message: "Both files must exists.");
 
             if (verbose)
                 Console.WriteLine("[*] Storing original data in memory...");
@@ -338,27 +353,20 @@ namespace RSAEncryption
 
             if (verbose)
                 Stopwatch.Restart();
-            if (RSAMethods.VerifySignedData(originalData, signedData, key, hashalg))
+            bool validSignature = RSAMethods.VerifySignedData(originalData, signedData, key, hashalg);
+            if (verbose)
             {
-                if (verbose)
-                {
-                    Stopwatch.Stop();
-                    Console.WriteLine($"[*] Elapsed time for verifying signature {Stopwatch.ElapsedMilliseconds} ms");
-                }
+                Stopwatch.Stop();
+                Console.WriteLine($"[*] Elapsed time for verifying signature {Stopwatch.ElapsedMilliseconds} ms");
+            }
+
+            if (validSignature)
                 Console.WriteLine($"[*] The file \"{fileName}\" contains a valid {hashalg} signature.");
-            }
             else
-            {
-                if (verbose)
-                {
-                    Stopwatch.Stop();
-                    Console.WriteLine($"[*] Elapsed time for verifying signature {Stopwatch.ElapsedMilliseconds} ms");
-                }
                 Console.WriteLine($"[*] The file \"{fileName}\" do not contains a valid {hashalg} signature.");
-            }
         }
 
-        static void Encrypt(string target, bool sign, EncryptionPairKey key, bool verbose, string output)
+        public static void Encrypt(string target, bool sign, EncryptionPairKey key, bool verbose, string output)
         {
             if (!Directory.Exists(output))
                 throw new ArgumentException(
@@ -370,7 +378,12 @@ namespace RSAEncryption
                     message: "Target cannot be null.",
                     paramName: nameof(target));
 
-            if (key.Public == null)
+            if (sign && key?.Private == null)
+                throw new ArgumentNullException(
+                    message: "Signing flag is enabled, must use private key.",
+                    paramName: nameof(key));
+
+            if (key?.Public == null)
                 throw new ArgumentNullException(
                     message: "In order to encrypt data, public key must not be null.",
                     paramName: nameof(key));
@@ -400,15 +413,16 @@ namespace RSAEncryption
                         Console.WriteLine($"[*] Elapsed time for encryption {Stopwatch.ElapsedMilliseconds} ms");
                     }
 
-                    if (sign)
-                    {
-                        Sign(target, key, output, verbose);
-                    }
-
                     if (verbose)
                         Console.WriteLine("[*] Saving file...");
+
                     FileManipulation.SaveFile(encrypted, output, $"{fileName}.encrypted{fileExt}", true);
                     Console.WriteLine($"[*] File saved as \"{fileName}.encrypted{fileExt}\" at {output}");
+
+                    if (sign)
+                    {
+                        Sign($@"{output}\{fileName}.encrypted{fileExt}", key, output, verbose);
+                    }
                 }
                 else if (Directory.Exists(target))
                 {
@@ -444,7 +458,7 @@ namespace RSAEncryption
 
                         if (sign)
                         {
-                            Sign(pathFiles[i], key, output, verbose);
+                            Sign($@"{output}\{fileName}.encrypted{fileExt}", key, output, verbose);
                         }
                     }
                 }
@@ -455,19 +469,20 @@ namespace RSAEncryption
             }
         }
 
-        static void ShowHelp(OptionSet opts)
+        public static void ShowHelp(OptionSet opts)
         {
             Console.WriteLine($"Usage: {exeName} [OPTIONS]");
             Console.WriteLine("Encrypts, decrypts, sign and verifies signature from files.");
             Console.WriteLine("Note: When encrypting or decrypting --target can be used to specify a directory");
             Console.WriteLine($"Note: If no output is specified, the default output path is {Environment.CurrentDirectory}.");
             Console.WriteLine("Note: Recommendation is that files are no larger than 10mb, cause it'll take longer");
+            Console.WriteLine("Note: When using decrypt on a directory it searches for files that contains .encrypted on it's name.");
             Console.WriteLine();
             Console.WriteLine("Options:");
             opts.WriteOptionDescriptions(Console.Out);
         }
 
-        static void ShowExamples(OptionSet opts)
+        public static void ShowExamples(OptionSet opts)
         {
             ShowHelp(opts);
             Console.Write("\n\n");

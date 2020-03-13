@@ -5,19 +5,28 @@ namespace RSAEncryption
 {
     public static class FileManipulation
     {
-        public static bool OpenFile(string path, out byte[] file)
+        /// <summary>
+        /// Open a file and outputs it's content.
+        /// </summary>
+        /// <param name="path">Full path with filename</param>
+        /// <param name="file">Outputs <see cref="FileStream"/> bytes.</param>
+        /// <returns></returns>
+        /// <exception cref="NullReferenceException">Path is null.</exception>
+        /// <exception cref="FileLoadException">Could not open file, check inner exception.</exception>
+        public static void OpenFile(string path, out byte[] file)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new NullReferenceException("Path is required");
 
             try
             {
-                FileStream fs = File.OpenRead(path);
-                byte[] bytes = new byte[fs.Length];
-                fs.Read(bytes, 0, Convert.ToInt32(fs.Length));
-                fs.Close();
-                file = bytes;
-                return true;
+                using (FileStream fs = File.OpenRead(path))
+                {
+                    byte[] bytes = new byte[fs.Length];
+                    fs.Read(bytes, 0, Convert.ToInt32(fs.Length));
+                    fs.Close();
+                    file = bytes;
+                }
             }
             catch (Exception ex)
             {
@@ -25,48 +34,75 @@ namespace RSAEncryption
             }
         }
 
-        public static bool SaveFile(byte[] file, string targetPath, string name, bool overwriteFile = false)
+        /// <summary>
+        /// Save <see cref="byte[]"/> content into a file.
+        /// </summary>
+        /// <param name="fileContent">File content.</param>
+        /// <param name="targetPath">Path to save.</param>
+        /// <param name="nameWithExtension">File name with it's extension</param>
+        /// <param name="overwriteFile">Overwrite existent file, otherwise false.</param>
+        /// <param name="attributes">Attributes to add to file, otherwise <see cref="FileAttributes.Normal"/></param>
+        /// <returns></returns>
+        /// <exception cref="NullReferenceException">Any of the required parameters are null.</exception>
+        /// <exception cref="IOException">Could not save file, check inner exception</exception>
+        public static bool SaveFile(byte[] fileContent, string targetPath, string nameWithExtension,
+            bool overwriteFile = false, FileAttributes attributes = FileAttributes.Normal)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(nameWithExtension))
                 throw new NullReferenceException("File name is required");
             if (string.IsNullOrWhiteSpace(targetPath))
                 throw new NullReferenceException("Target path is required");
-            if (file == null || file.Length == 0)
+            if (fileContent == null || fileContent.Length == 0)
                 throw new NullReferenceException("File is required");
+
+            string fullPath = $@"{targetPath}\{nameWithExtension}";
 
             try
             {
-                string fullPath = $@"{targetPath}\{name}";
                 if (!Directory.Exists(targetPath))
                     Directory.CreateDirectory(targetPath);
                 if (!File.Exists(fullPath))
-                    File.WriteAllBytes(fullPath, file);
+                    File.WriteAllBytes(fullPath, fileContent);
                 else if (overwriteFile)
-                    File.WriteAllBytes(fullPath, file);
+                    File.WriteAllBytes(fullPath, fileContent);
                 else
                     return false;
 
+                if (attributes != FileAttributes.Normal)
+                {
+                    File.SetAttributes(fullPath, attributes);
+                }
                 return true;
             }
             catch (Exception ex)
             {
+                if (File.Exists(fullPath))
+                    DeleteFile(fullPath);
                 throw new IOException("Couldn't save the file check inner exception for details", ex);
             }
         }
 
-        public static bool DeleteFile(string filePath)
+        /// <summary>
+        /// Delete a specified file.
+        /// </summary>
+        /// <param name="filePath">Full path file.</param>
+        /// <returns></returns>
+        /// <exception cref="NullReferenceException">File path is null.</exception>
+        /// <exception cref="ArgumentException">Path is not a valid file.</exception>
+        /// <exception cref="IOException">Could not delete the file, check inner exception.</exception>
+        public static void DeleteFile(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
                 throw new NullReferenceException("File path is required");
 
-            var attr = File.GetAttributes(filePath);
-            if ((attr & FileAttributes.Directory) == FileAttributes.Directory)
-                throw new ArgumentException("Must be a file not a directory", nameof(filePath));
+            if (!File.Exists(filePath))
+                throw new ArgumentException(
+                    message: "File do not exist.",
+                    paramName: nameof(filePath));
 
             try
             {
                 File.Delete(filePath);
-                return true;
             }
             catch (Exception exe)
             {

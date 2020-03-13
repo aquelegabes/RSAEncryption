@@ -20,7 +20,8 @@ MIT License</Description>
     <PackageReleaseNotes>release v1:
     - Encrypts/decrypts single, multiple files
     - Sign encrypted data
-    - Checks for a valid signature</PackageReleaseNotes>
+    - Checks for a valid signature
+    - Generate a new RSA key</PackageReleaseNotes>
     <PackageTags>encryption privacy</PackageTags>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
