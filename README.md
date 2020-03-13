@@ -14,19 +14,23 @@
 
 ### Options:
 ```
-  -e, --encrypt               encrypts the data, requires public key [ACTION]
+  -e, --encrypt               encrypts the data, requires public key 
+                                  [ACTION]
 ```
 ```
-  -d, --decrypt               decrypts the encrypted data, requires private key [ACTION]
+  -d, --decrypt               decrypts the encrypted data, requires private key 
+                                  [ACTION]
 ```
 ```
-  -h, --help                  show this message and exit [ACTION]
+  -h, --help                  show this message and exit 
+                                  [ACTION]
 ```
 ```
   -o, --output=VALUE          path to output encrypted files
 ```
 ```
-  -s, --sign                  signs the encrypted data, requires private key [ACTION]
+  -s, --sign                  signs the encrypted data, requires private key 
+                                  [ACTION]
 ```
 ```
   -t, --target=VALUE          file or directory to be encrypted, decrypted or to
@@ -37,7 +41,8 @@
   -v, --verifysignature       verify if signed data is trustworthy, requires public key
 ```
 ```
-  -x, --examples              show specific examples [ACTION]
+  -x, --examples              show specific examples 
+                                  [ACTION]
 ```
 ```
   --hashalg=VALUE             type of hashing algorithm, examples: SHA1, SHA256.
@@ -49,7 +54,8 @@
 ```
 ```
   --newkey=VALUE              generates a new RSA Key with specified key size,
-                                  exports public and private separetly [ACTION]
+                                  exports public and private separetly 
+                                  [ACTION]
 ```
 ```
   --publickey=VALUE           path where public key is stored (.pem file)
@@ -65,7 +71,8 @@
   --verbose                   increase debug message verbosity
 ```
 ```
-  --version                   shows version [ACTION]
+  --version                   shows version 
+                                  [ACTION]
 ```
 ### Examples:
 * Encrypting and signing:
