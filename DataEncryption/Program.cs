@@ -263,20 +263,17 @@ namespace RSAEncryption
                 }
                 else if (Directory.Exists(target))
                 {
-                    var pathFiles = Directory.GetFiles(target);
+                    var pathFiles = Directory.GetFiles(target, "*encryp*");
                     for (int i = 0; i < pathFiles.Length; i++)
                     {
                         string fileName = Path.GetFileNameWithoutExtension(pathFiles[i]);
-
-                        if (fileName.Contains("sign"))
-                            continue;
 
                         fileName = fileName.Replace(".encrypted", "");
                         string fileExt = Path.GetExtension(pathFiles[i]);
 
                         if (verbose)
                         {
-                            Console.WriteLine($"[*] Encrypting {i + 1} out of {pathFiles.Length} file(s).");
+                            Console.WriteLine($"[*] Decrypting {i + 1} out of {pathFiles.Length} file(s).");
                             Console.WriteLine("[*] Storing file in memory...");
                         }
 
