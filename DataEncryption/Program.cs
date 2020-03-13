@@ -61,8 +61,7 @@ namespace RSAEncryption
             try
             {
                 extra = opts.Parse(args);
-
-                if (help)
+                if (help || args == null)
                 {
                     ShowHelp(opts);
                     return;
