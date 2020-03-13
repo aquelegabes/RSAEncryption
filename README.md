@@ -1,4 +1,10 @@
 # RSA Encryption Console
+
+<p align="center">
+<a href="https://github.com/gabesantos1/RSAEncryption/blob/master/LICENSE"><img alt="undefined" src="https://img.shields.io/github/license/gabesantos1/RSAEncryption"></a>
+<br>
+</p>
+
 ## Usage: rsaencryption [OPTIONS]
 ##### Encrypts, decrypts, sign and verifies signature on files. Encrypt files using Rijndael encryption algorithm with RSA keys.
 ##### Note: When encrypting or decrypting ```--target``` can be used to specify a directory.
@@ -8,19 +14,19 @@
 
 ### Options:
 ```
-  -e, --encrypt               encrypts the data, requires public key
+  -e, --encrypt               encrypts the data, requires public key [ACTION]
 ```
 ```
-  -d, --decrypt               decrypts the encrypted data, requires private key
+  -d, --decrypt               decrypts the encrypted data, requires private key [ACTION]
 ```
 ```
-  -h, --help                  show this message and exit
+  -h, --help                  show this message and exit [ACTION]
 ```
 ```
   -o, --output=VALUE          path to output encrypted files
 ```
 ```
-  -s, --sign                  signs the encrypted data, requires private key
+  -s, --sign                  signs the encrypted data, requires private key [ACTION]
 ```
 ```
   -t, --target=VALUE          file or directory to be encrypted, decrypted or to
@@ -31,15 +37,19 @@
   -v, --verifysignature       verify if signed data is trustworthy, requires public key
 ```
 ```
-  -x, --examples              show specific examples
+  -x, --examples              show specific examples [ACTION]
 ```
 ```
   --hashalg=VALUE             type of hashing algorithm, examples: SHA1, SHA256.
                                   default value is SHA256
 ```
 ```
+--keyfilename=VALUE           when generating a new key use this to choose file
+                                  name, default is "key"
+```
+```
   --newkey=VALUE              generates a new RSA Key with specified key size,
-                                  exports public and private separetly
+                                  exports public and private separetly [ACTION]
 ```
 ```
   --publickey=VALUE           path where public key is stored (.pem file)
@@ -55,7 +65,7 @@
   --verbose                   increase debug message verbosity
 ```
 ```
-  --version              shows version
+  --version                   shows version [ACTION]
 ```
 ### Examples:
 * Encrypting and signing:
