@@ -101,7 +101,7 @@ namespace RSAEncryption
                 bool isPublic = argsValue.ContainsKey("publickey");
                 var pathKey = isPublic ? argsValue["publickey"] : argsValue.ContainsKey("privatekey") ? argsValue["privatekey"] : "";
                 var key = !string.IsNullOrWhiteSpace(pathKey) ? EncryptionPairKey.FromPEMFile(pathKey, !isPublic) : null;
-                
+
                 hashalg = string.IsNullOrWhiteSpace(hashalg) ? "SHA256" : hashalg.ToUpper();
 
                 Console.WriteLine($"[*] Starting {exeName}...");
@@ -137,7 +137,7 @@ namespace RSAEncryption
             catch (OptionException e)
             {
                 Console.Write($"{exeName}: ");
-                Console.WriteLine(e.Message.Contains("inner") ?  e.InnerException.Message :  e.Message);
+                Console.WriteLine(e.Message.Contains("inner") ? e.InnerException.Message : e.Message);
                 Console.WriteLine($"Try '{exeName} --help' for more information or --examples");
                 return;
             }
@@ -239,21 +239,53 @@ namespace RSAEncryption
                 throw new InvalidOperationException(
                     message: "Impossible to decrypt data using a public key.");
 
-            else
+            if (File.Exists(target))
             {
-                if (File.Exists(target))
+                string fileName = Path.GetFileNameWithoutExtension(target);
+                fileName = fileName.Replace(".encrypted", "");
+                string fileExt = Path.GetExtension(target);
+
+                if (verbose)
                 {
-                    string fileName = Path.GetFileNameWithoutExtension(target);
+                    Console.WriteLine("[*] Decrypting 1 out of 1 file(s).");
+                    Console.WriteLine("[*] Storing file in memory...");
+                }
+
+                FileManipulation.OpenFile(target, out var file);
+                if (verbose)
+                {
+                    Console.WriteLine("[*] File in memory...");
+                    Console.WriteLine("[*] Starting decryption...");
+                    Stopwatch.Restart();
+                }
+                var decrypted = RSAMethods.DecryptFile(file, key);
+                if (verbose)
+                {
+                    Stopwatch.Stop();
+                    Console.WriteLine($"[*] Elapsed time for decryption {Stopwatch.ElapsedMilliseconds} ms");
+                    Console.WriteLine("[*] Saving file...");
+                }
+
+                FileManipulation.SaveFile(decrypted, output, $"{fileName}.decrypted{fileExt}", true);
+                Console.WriteLine($"[*] File saved as \"{fileName}.decrypted{fileExt}\" at {output}");
+            }
+            else if (Directory.Exists(target))
+            {
+                var pathFiles = Directory.GetFiles(target, "*encryp*");
+                for (int i = 0; i < pathFiles.Length; i++)
+                {
+                    string fileName = Path.GetFileNameWithoutExtension(pathFiles[i]);
+
                     fileName = fileName.Replace(".encrypted", "");
-                    string fileExt = Path.GetExtension(target);
+                    string fileExt = Path.GetExtension(pathFiles[i]);
 
                     if (verbose)
                     {
-                        Console.WriteLine("[*] Decrypting 1 out of 1 file(s).");
+                        Console.WriteLine($"[*] Decrypting {i + 1} out of {pathFiles.Length} file(s).");
                         Console.WriteLine("[*] Storing file in memory...");
                     }
 
-                    FileManipulation.OpenFile(target, out var file);
+                    FileManipulation.OpenFile(pathFiles[i], out var file);
                     if (verbose)
                     {
                         Console.WriteLine("[*] File in memory...");
@@ -271,45 +303,10 @@ namespace RSAEncryption
                     FileManipulation.SaveFile(decrypted, output, $"{fileName}.decrypted{fileExt}", true);
                     Console.WriteLine($"[*] File saved as \"{fileName}.decrypted{fileExt}\" at {output}");
                 }
-                else if (Directory.Exists(target))
-                {
-                    var pathFiles = Directory.GetFiles(target, "*encryp*");
-                    for (int i = 0; i < pathFiles.Length; i++)
-                    {
-                        string fileName = Path.GetFileNameWithoutExtension(pathFiles[i]);
-
-                        fileName = fileName.Replace(".encrypted", "");
-                        string fileExt = Path.GetExtension(pathFiles[i]);
-
-                        if (verbose)
-                        {
-                            Console.WriteLine($"[*] Decrypting {i + 1} out of {pathFiles.Length} file(s).");
-                            Console.WriteLine("[*] Storing file in memory...");
-                        }
-
-                        FileManipulation.OpenFile(pathFiles[i], out var file);
-                        if (verbose)
-                        {
-                            Console.WriteLine("[*] File in memory...");
-                            Console.WriteLine("[*] Starting decryption...");
-                            Stopwatch.Restart();
-                        }
-                        var decrypted = RSAMethods.DecryptFile(file, key);
-                        if (verbose)
-                        {
-                            Stopwatch.Stop();
-                            Console.WriteLine($"[*] Elapsed time for decryption {Stopwatch.ElapsedMilliseconds} ms");
-                            Console.WriteLine("[*] Saving file...");
-                        }
-
-                        FileManipulation.SaveFile(decrypted, output, $"{fileName}.decrypted{fileExt}", true);
-                        Console.WriteLine($"[*] File saved as \"{fileName}.decrypted{fileExt}\" at {output}");
-                    }
-                }
-                else
-                {
-                    throw new ArgumentException(message: "Target path is non-existent.");
-                }
+            }
+            else
+            {
+                throw new ArgumentException(message: "Target path is non-existent.");
             }
         }
 
@@ -377,19 +374,56 @@ namespace RSAEncryption
                 throw new ArgumentNullException(
                     message: "In order to encrypt data, public key must not be null.",
                     paramName: nameof(key));
-            else
+
+            if (File.Exists(target))
             {
-                if (File.Exists(target))
+                if (verbose)
+                    Console.WriteLine($"[*] Encrypting 1 out of 1 file(s).");
+
+                string fileName = Path.GetFileNameWithoutExtension(target);
+                string fileExt = Path.GetExtension(target);
+
+                if (verbose)
+                    Console.WriteLine("[*] Storing file in memory...");
+                FileManipulation.OpenFile(target, out var file);
+                if (verbose)
+                {
+                    Console.WriteLine("[*] File in memory...");
+                    Console.WriteLine("[*] Starting encryption...");
+                    Stopwatch.Restart();
+                }
+                var encrypted = RSAMethods.EncryptFile(file, key);
+                if (verbose)
+                {
+                    Stopwatch.Stop();
+                    Console.WriteLine($"[*] Elapsed time for encryption {Stopwatch.ElapsedMilliseconds} ms");
+                }
+
+                if (verbose)
+                    Console.WriteLine("[*] Saving file...");
+
+                FileManipulation.SaveFile(encrypted, output, $"{fileName}.encrypted{fileExt}", true);
+                Console.WriteLine($"[*] File saved as \"{fileName}.encrypted{fileExt}\" at {output}");
+
+                if (sign)
+                {
+                    Sign($@"{output}\{fileName}.encrypted{fileExt}", key, output, verbose);
+                }
+            }
+            else if (Directory.Exists(target))
+            {
+                var pathFiles = Directory.GetFiles(target);
+                for (int i = 0; i < pathFiles.Length; i++)
                 {
                     if (verbose)
-                        Console.WriteLine($"[*] Encrypting 1 out of 1 file(s).");
+                        Console.WriteLine($"[*] Encrypting {i + 1} out of {pathFiles.Length} file(s).");
 
-                    string fileName = Path.GetFileNameWithoutExtension(target);
-                    string fileExt = Path.GetExtension(target);
+                    string fileName = Path.GetFileNameWithoutExtension(pathFiles[i]);
+                    string fileExt = Path.GetExtension(pathFiles[i]);
 
                     if (verbose)
                         Console.WriteLine("[*] Storing file in memory...");
-                    FileManipulation.OpenFile(target, out var file);
+                    FileManipulation.OpenFile(pathFiles[i], out var file);
                     if (verbose)
                     {
                         Console.WriteLine("[*] File in memory...");
@@ -405,7 +439,6 @@ namespace RSAEncryption
 
                     if (verbose)
                         Console.WriteLine("[*] Saving file...");
-
                     FileManipulation.SaveFile(encrypted, output, $"{fileName}.encrypted{fileExt}", true);
                     Console.WriteLine($"[*] File saved as \"{fileName}.encrypted{fileExt}\" at {output}");
 
@@ -414,48 +447,10 @@ namespace RSAEncryption
                         Sign($@"{output}\{fileName}.encrypted{fileExt}", key, output, verbose);
                     }
                 }
-                else if (Directory.Exists(target))
-                {
-                    var pathFiles = Directory.GetFiles(target);
-                    for (int i = 0; i < pathFiles.Length; i++)
-                    {
-                        if (verbose)
-                            Console.WriteLine($"[*] Encrypting {i + 1} out of {pathFiles.Length} file(s).");
-
-                        string fileName = Path.GetFileNameWithoutExtension(pathFiles[i]);
-                        string fileExt = Path.GetExtension(pathFiles[i]);
-
-                        if (verbose)
-                            Console.WriteLine("[*] Storing file in memory...");
-                        FileManipulation.OpenFile(pathFiles[i], out var file);
-                        if (verbose)
-                        {
-                            Console.WriteLine("[*] File in memory...");
-                            Console.WriteLine("[*] Starting encryption...");
-                            Stopwatch.Restart();
-                        }
-                        var encrypted = RSAMethods.EncryptFile(file, key);
-                        if (verbose)
-                        {
-                            Stopwatch.Stop();
-                            Console.WriteLine($"[*] Elapsed time for encryption {Stopwatch.ElapsedMilliseconds} ms");
-                        }
-
-                        if (verbose)
-                            Console.WriteLine("[*] Saving file...");
-                        FileManipulation.SaveFile(encrypted, output, $"{fileName}.encrypted{fileExt}", true);
-                        Console.WriteLine($"[*] File saved as \"{fileName}.encrypted{fileExt}\" at {output}");
-
-                        if (sign)
-                        {
-                            Sign($@"{output}\{fileName}.encrypted{fileExt}", key, output, verbose);
-                        }
-                    }
-                }
-                else
-                {
-                    throw new ArgumentException(message: "Target path is non-existent.");
-                }
+            }
+            else
+            {
+                throw new ArgumentException(message: "Target path is non-existent.");
             }
         }
 
