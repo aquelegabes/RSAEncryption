@@ -100,7 +100,7 @@ namespace RSAEncryption
                 var output = argsValue.ContainsKey("output") ? argsValue["output"] : Environment.CurrentDirectory;
                 bool isPublic = argsValue.ContainsKey("publickey");
                 var pathKey = isPublic ? argsValue["publickey"] : argsValue.ContainsKey("privatekey") ? argsValue["privatekey"] : "";
-                var key = !string.IsNullOrWhiteSpace(pathKey) ? EncryptionPairKey.ImportFromFile(pathKey, !isPublic) : null;
+                var key = !string.IsNullOrWhiteSpace(pathKey) ? EncryptionPairKey.FromPEMFile(pathKey, !isPublic) : null;
                 
                 hashalg = string.IsNullOrWhiteSpace(hashalg) ? "SHA256" : hashalg.ToUpper();
 
@@ -127,30 +127,11 @@ namespace RSAEncryption
                 }
                 if (newKey != -1)
                 {
-                    if (newKey < 0)
-                        throw new ArgumentException(
-                            message: "Key size must not be negative.",
-                            paramName: nameof(newKey));
-
-                    if (verbose)
-                    {
-                        Console.WriteLine("[*] Generating RSA key...");
-                        Stopwatch.Restart();
-                    }
-                    var keyNew = EncryptionPairKey.New(newKey);
-                    if (verbose)
-                    {
-                        Stopwatch.Stop();
-                        Console.WriteLine($"[*] Elapsed time for generating new RSA key {Stopwatch.ElapsedMilliseconds} ms");
-                        Console.WriteLine("[*] Exporting public key...");
-                    }
-                    keyNew.ExportToFile(output, includePrivate: false);
-                    if (verbose)
-                        Console.WriteLine("[*] Exporting private key...");
-                    keyNew.ExportToFile(output, includePrivate: true);
-
-                    Console.WriteLine($"[*] Key generated and exported to {output}");
-                    Console.WriteLine("[*] as pubkey.pem and privkey.pem");
+                    if (argsValue.ContainsKey("keyfilename"))
+                        GenerateKey(newKey, verbose, output, argsValue["keyfilename"]);
+                    else
+                        GenerateKey(newKey, verbose, output);
+                    return;
                 }
             }
             catch (OptionException e)
@@ -169,21 +150,35 @@ namespace RSAEncryption
             }
         }
 
+        public static void GenerateKey(int newKey, bool verbose, string output, string filename = "key")
+        {
+            if (verbose)
+            {
+                Console.WriteLine("[*] Generating RSA key...");
+                Stopwatch.Restart();
+            }
+            var keyNew = EncryptionPairKey.New(newKey);
+            if (verbose)
+            {
+                Stopwatch.Stop();
+                Console.WriteLine($"[*] Elapsed time for generating new RSA key {Stopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine("[*] Exporting public key...");
+            }
+            keyNew.ToPEMFile(output, filename, false);
+            if (verbose)
+                Console.WriteLine("[*] Exporting private key...");
+            keyNew.ToPEMFile(output, filename, true);
+
+            Console.WriteLine($"[*] Key generated and exported to {output}");
+            Console.WriteLine($"[*] as pub.{filename}.pem and pub.{filename}.pem");
+        }
+
         public static void Sign(string target, EncryptionPairKey key, string output, bool verbose)
         {
             if (string.IsNullOrWhiteSpace(output))
                 output = Environment.CurrentDirectory;
-            else if (!Directory.Exists(output))
-                throw new ArgumentException(
-                    message: "Invalid directory path.",
-                    paramName: nameof(output));
 
-            if (string.IsNullOrWhiteSpace(target))
-                throw new ArgumentNullException(
-                    message: "Target cannot be null.",
-                    paramName: nameof(target));
-
-            if (key?.Private == null)
+            if (key == null)
                 throw new ArgumentNullException(
                     message: "In order to decrypt data, private key must not be null.",
                     paramName: nameof(key));
@@ -229,20 +224,21 @@ namespace RSAEncryption
         {
             if (string.IsNullOrWhiteSpace(output))
                 output = Environment.CurrentDirectory;
-            else if (!Directory.Exists(output))
-                throw new ArgumentException(
-                    message: "Invalid directory path.",
-                    paramName: nameof(output));
 
             if (string.IsNullOrWhiteSpace(target))
                 throw new ArgumentNullException(
                     message: "Target cannot be null.",
                     paramName: nameof(target));
 
-            if (key?.Private == null)
+            if (key == null)
                 throw new ArgumentNullException(
                     message: "In order to decrypt data, private key must not be null.",
                     paramName: nameof(key));
+
+            if (key.PublicOnly)
+                throw new InvalidOperationException(
+                    message: "Impossible to decrypt data using a public key.");
+
             else
             {
                 if (File.Exists(target))
@@ -329,7 +325,7 @@ namespace RSAEncryption
                     message: "Signed data path cannot be null.",
                     paramName: nameof(signedDataPath));
 
-            if (key?.Public == null)
+            if (key == null)
                 throw new ArgumentNullException(
                     message: "In order to verify signature, public key must not be null.",
                     paramName: nameof(key));
@@ -368,22 +364,16 @@ namespace RSAEncryption
 
         public static void Encrypt(string target, bool sign, EncryptionPairKey key, bool verbose, string output)
         {
-            if (!Directory.Exists(output))
-                throw new ArgumentException(
-                    message: "Invalid directory path.",
-                    paramName: nameof(output));
-
             if (string.IsNullOrWhiteSpace(target))
                 throw new ArgumentNullException(
                     message: "Target cannot be null.",
                     paramName: nameof(target));
 
-            if (sign && key?.Private == null)
-                throw new ArgumentNullException(
-                    message: "Signing flag is enabled, must use private key.",
-                    paramName: nameof(key));
+            if (sign && key?.PublicOnly == true)
+                throw new InvalidOperationException(
+                    message: "Signing flag is enabled, must use private key.");
 
-            if (key?.Public == null)
+            if (key == null)
                 throw new ArgumentNullException(
                     message: "In order to encrypt data, public key must not be null.",
                     paramName: nameof(key));

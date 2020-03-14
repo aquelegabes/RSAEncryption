@@ -24,7 +24,7 @@ namespace RSAEncryption.Encryption
         {
             // Importing 
             using var rsa = new RSACryptoServiceProvider();
-            rsa.ImportParameters(publicKey.ExportToRSAParameters(false));
+            rsa.ImportParameters(publicKey.RSAParameters);
 
             // Create instance of Rijndael for
             // symetric encryption of the data.
@@ -97,7 +97,7 @@ namespace RSAEncryption.Encryption
         {
             // Importing 
             using var rsa = new RSACryptoServiceProvider();
-            rsa.ImportParameters(privateKey.ExportToRSAParameters(true));
+            rsa.ImportParameters(privateKey.RSAParameters);
 
             // Create instance of Rijndael for
             // symetric decryption of the data.
@@ -209,7 +209,7 @@ namespace RSAEncryption.Encryption
                     paramName: nameof(data)
                 );
 
-            if (publicKey?.Public == null)
+            if (publicKey == null)
             {
                 throw new ArgumentNullException(
                     message: "Public key must not be null.",
@@ -221,8 +221,7 @@ namespace RSAEncryption.Encryption
             {
                 try
                 {
-                    var rsaParams = publicKey.ExportToRSAParameters(false);
-                    rsa.ImportParameters(rsaParams);
+                    rsa.ImportParameters(publicKey.RSAParameters);
 
                     return rsa.Encrypt(data, false);
                 }
@@ -271,7 +270,7 @@ namespace RSAEncryption.Encryption
                     paramName: nameof(encryptedData)
                 );
 
-            if (privateKey?.Private == null)
+            if (privateKey == null)
                 throw new ArgumentNullException(
                     message: "Private key must not be null.",
                     paramName: nameof(privateKey)
@@ -281,9 +280,7 @@ namespace RSAEncryption.Encryption
             {
                 try
                 {
-                    var rsaParams = privateKey.ExportToRSAParameters(true);
-
-                    rsa.ImportParameters(rsaParams);
+                    rsa.ImportParameters(privateKey.RSAParameters);
                     return rsa.SignData(encryptedData, CryptoConfig.MapNameToOID(hashAlgorithmName));
                 }
                 catch (ArgumentNullException ex)
@@ -333,7 +330,7 @@ namespace RSAEncryption.Encryption
                     paramName: $"Params: [ {nameof(dataToBeSigned)}, {nameof(signedData)} ]"
                 );
 
-            if (publicKey?.Public == null)
+            if (publicKey == null)
                 throw new ArgumentNullException(
                     message: "Public key must not be null.",
                     paramName: nameof(publicKey)
@@ -343,8 +340,7 @@ namespace RSAEncryption.Encryption
             {
                 try
                 {
-                    var rsaParams = publicKey.ExportToRSAParameters(false);
-                    rsa.ImportParameters(rsaParams);
+                    rsa.ImportParameters(publicKey.RSAParameters);
 
                     if (!rsa.VerifyData(dataToBeSigned, CryptoConfig.MapNameToOID(hashAlgorithmName), signedData))
                         return false;
@@ -395,7 +391,7 @@ namespace RSAEncryption.Encryption
                     paramName: nameof(encryptedData)
                 );
 
-            if (privateKey?.Private == null)
+            if (privateKey == null)
                 throw new ArgumentNullException(
                     message: "Private key must not be null.",
                     paramName: nameof(privateKey)
@@ -405,8 +401,7 @@ namespace RSAEncryption.Encryption
             {
                 try
                 {
-                    var rsaParams = privateKey.ExportToRSAParameters(true);
-                    rsa.ImportParameters(rsaParams);
+                    rsa.ImportParameters(privateKey.RSAParameters);
 
                     return rsa.Decrypt(encryptedData, false);
                 }

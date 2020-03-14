@@ -49,9 +49,13 @@ namespace RSAEncryption
             bool overwriteFile = false, FileAttributes attributes = FileAttributes.Normal)
         {
             if (string.IsNullOrWhiteSpace(nameWithExtension))
-                throw new NullReferenceException("File name is required");
+                throw new NullReferenceException("File name is required.");
             if (string.IsNullOrWhiteSpace(targetPath))
-                throw new NullReferenceException("Target path is required");
+                throw new NullReferenceException("Target path is required.");
+            if (!Directory.Exists(targetPath))
+                throw new ArgumentException(
+                    message: "Invalid directory path.",
+                    paramName: nameof(targetPath));
             if (fileContent == null || fileContent.Length == 0)
                 throw new NullReferenceException("File is required");
 

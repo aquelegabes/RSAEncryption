@@ -1,7 +1,6 @@
 ﻿using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.OpenSsl;
-using Org.BouncyCastle.Security;
 using RSAEncryption.Encryption;
 using System;
 using System.IO;
@@ -11,7 +10,7 @@ namespace RSAEncryption.Extensions
 {
     public static class RSACryptoServiceProviderExtensions
     {
-        // <summary>
+        /// <summary>
         /// Import OpenSSH PEM private/public key string into MS RSACryptoServiceProvider
         /// </summary>
         /// <param name="csp"></param>
@@ -35,7 +34,15 @@ namespace RSAEncryption.Extensions
             }
 
             csp.ImportParameters(rsaParams);
-            return EncryptionPairKey.ImportFromRSAParameters(rsaParams, csp.KeySize, includePrivate);
+
+            if (csp.PublicOnly && includePrivate)
+                throw new InvalidOperationException(
+                    message: "Impossible to export private content from a public key.");
+
+            return new EncryptionPairKey(csp.KeySize, !includePrivate)
+            {
+                RSAParameters = rsaParams
+            };
         }
 
         /// <summary>
