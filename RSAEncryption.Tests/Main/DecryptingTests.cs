@@ -1,29 +1,33 @@
 ﻿using RSAEncryption.Encryption;
 using System;
 using System.IO;
+using System.Linq;
 using Xunit;
 
 namespace RSAEncryption.Tests.Main
 {
     public class DecryptingTests
     {
-        readonly EncryptingTests encryptingTest = new EncryptingTests();
-
         [Fact]
         public void Main_Decrypting_SingleFile_Verbosity_OK()
         {
-            encryptingTest.Main_Encrypting_SingleFile_Verbosity_OK();
+            Setup.Initialize(out var testFolders);
+            Setup.SetEncryptedFiles(testFolders);
 
-            string originalFilePath = $@"{UtilsTests.OriginalPath}\text1.txt";
-            string targetFilePath = $@"{UtilsTests.EncryptedPath}\text1.encrypted.txt";
-            string outputFilePath = $@"{UtilsTests.DecryptedPath}\text1.decrypted.txt";
+            string originalFilePath = Directory.GetFiles(testFolders["original"]).First();
+            string outputFilePath = Path.Combine(
+                path1: testFolders["decrypted"],
+                path2: Path.GetFileNameWithoutExtension(originalFilePath) + ".decrypted.txt");
+            string targetFilePath = Path.Combine(
+                path1: testFolders["encrypted"],
+                path2: Path.GetFileNameWithoutExtension(originalFilePath) + ".encrypted.txt");
 
             string[] args =
             {
                 "-d", "--verbose",
-                $@"--privatekey={UtilsTests.AbsolutePath}\priv.key.pem",
-                $"--output={UtilsTests.DecryptedPath}",
-                @$"--target={targetFilePath}",
+                $@"--privatekey={Setup.AbsolutePath}\priv.key.pem",
+                $"--output={testFolders["decrypted"]}",
+                $"--target={targetFilePath}",
             };
 
             Program.Main(args);
@@ -43,23 +47,25 @@ namespace RSAEncryption.Tests.Main
         [Fact]
         public void Main_Decrypting_MultipleFile_Verbosity_OK()
         {
-            encryptingTest.Main_Encrypting_MultipleFile_Verbosity_OK();
+            Setup.Initialize(out var testFolders);
+            Setup.SetEncryptedFiles(testFolders, true);
 
-            string[] originalFilesPath = Directory.GetFiles(UtilsTests.OriginalPath);
-            string[] targetFilesPath = Directory.GetFiles(UtilsTests.EncryptedPath, "*encrypt*");
+            string[] originalFilesPath = Directory.GetFiles(testFolders["original"]);
+            string[] targetFilesPath = Directory.GetFiles(testFolders["encrypted"], "*encrypt*");
+
             Array.Sort(targetFilesPath);
 
             string[] args =
             {
                 "-d", "--verbose",
-                $@"--privatekey={UtilsTests.AbsolutePath}\priv.key.pem",
-                $"--output={UtilsTests.DecryptedPath}",
-                @$"--target={UtilsTests.EncryptedPath}",
+                $@"--privatekey={Setup.AbsolutePath}\priv.key.pem",
+                $"--output={testFolders["decrypted"]}",
+                @$"--target={testFolders["encrypted"]}",
             };
 
             Program.Main(args);
 
-            string[] outputFilesPath = Directory.GetFiles(UtilsTests.DecryptedPath);
+            string[] outputFilesPath = Directory.GetFiles(testFolders["decrypted"]);
             Array.Sort(outputFilesPath);
 
             Assert.Equal(outputFilesPath.Length, originalFilesPath.Length);
@@ -80,64 +86,72 @@ namespace RSAEncryption.Tests.Main
         [Fact]
         public void Decrypting_NonExistentTarget_Exc()
         {
-            string targetFilePath = $@"{UtilsTests.OriginalPath}\nonexisting.txt";
-            var key = EncryptionPairKey.FromPEMFile($@"{UtilsTests.AbsolutePath}\priv.key.pem", true);
+            Setup.Initialize(out var testFolders);
+            Setup.SetEncryptedFiles(testFolders);
+
+            string targetFilePath = $@"{testFolders["original"]}\nonexisting.txt";
+            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\priv.key.pem", true);
 
             Assert.NotNull(key);
 
-            UtilsTests.InitializeTests();
             Assert.Throws<ArgumentException>(()
-                => Program.Decrypt(targetFilePath, key, UtilsTests.EncryptedPath, false));
+                => Program.Decrypt(targetFilePath, key, testFolders["encrypted"], false));
         }
 
         [Fact]
         public void Decrypting_OutputInvalid_Exc()
         {
-            encryptingTest.Main_Encrypting_SingleFile_Verbosity_OK();
+            Setup.Initialize(out var testFolders);
+            Setup.SetEncryptedFiles(testFolders);
 
-            string targetFilePath = $@"{UtilsTests.EncryptedPath}\text1.encrypted.txt";
-            var key = EncryptionPairKey.FromPEMFile($@"{UtilsTests.AbsolutePath}\priv.key.pem", true);
+            string targetFilePath = Directory.GetFiles(testFolders["encrypted"]).First();
+            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\priv.key.pem", true);
 
             Assert.NotNull(key);
 
-            UtilsTests.InitializeTests();
             Assert.Throws<ArgumentException>(()
-                => Program.Decrypt(targetFilePath, key, @$"{UtilsTests.AbsolutePath}\invalidpath",false));
+                => Program.Decrypt(targetFilePath, key, @$"{Setup.AbsolutePath}\invalidpath",false));
         }
 
         [Fact]
         public void Decrypting_TargetNull_Exc()
         {
-            encryptingTest.Main_Encrypting_SingleFile_Verbosity_OK();
+            Setup.Initialize(out var testFolders);
+            Setup.SetEncryptedFiles(testFolders);
 
-            var key = EncryptionPairKey.FromPEMFile($@"{UtilsTests.AbsolutePath}\priv.key.pem", true);
+            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\priv.key.pem", true);
 
             Assert.NotNull(key);
 
-            UtilsTests.InitializeTests();
             Assert.Throws<ArgumentNullException>(()
-                => Program.Decrypt("", key, UtilsTests.EncryptedPath, false));
+                => Program.Decrypt("", key, testFolders["encrypted"], false));
         }
 
         [Fact]
         public void Decrypting_NullKey_Exc()
         {
-            string targetFilePath = $@"{UtilsTests.EncryptedPath}\text1.encrypted.txt";
+            Setup.Initialize(out var testFolders);
+            Setup.SetEncryptedFiles(testFolders);
 
-            Assert.Throws<ArgumentNullException>(() 
-                => Program.Decrypt(targetFilePath, null, UtilsTests.DecryptedPath, false));
+            string targetFilePath = Directory.GetFiles(testFolders["encrypted"]).First();
+
+            Assert.Throws<ArgumentNullException>(()
+                => Program.Decrypt(targetFilePath, null, testFolders["decrypted"], false));
         }
 
         [Fact]
         public void Decrypting_UsingPublicKey_Exc()
         {
-            string targetFilePath = $@"{UtilsTests.EncryptedPath}\text1.encrypted.txt";
-            var key = EncryptionPairKey.FromPEMFile($@"{UtilsTests.AbsolutePath}\pub.key.pem", false);
+            Setup.Initialize(out var testFolders);
+            Setup.SetEncryptedFiles(testFolders);
+
+            string targetFilePath = Directory.GetFiles(testFolders["encrypted"]).First();
+            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\pub.key.pem", false);
 
             Assert.NotNull(key);
 
             Assert.Throws<InvalidOperationException>(()
-                => Program.Decrypt(targetFilePath, key, UtilsTests.DecryptedPath, false));
+                => Program.Decrypt(targetFilePath, key, testFolders["decrypted"], false));
         }
     }
 }

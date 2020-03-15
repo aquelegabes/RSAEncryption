@@ -9,7 +9,7 @@ using System.Reflection;
 
 namespace RSAEncryption
 {
-    public class Program
+    public static class Program
     {
         static readonly Stopwatch Stopwatch = new Stopwatch();
         static readonly string exeName = Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
