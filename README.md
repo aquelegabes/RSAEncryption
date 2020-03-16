@@ -26,7 +26,7 @@
                                   [ACTION]
 ```
 ```
-  -m, --merge                 merge signature with another file, use --signaturefile,
+  -m, --merge                 merge signature and original data, use --signaturefile,
                                   requires private key
                                   [ACTION]
 ```
@@ -43,7 +43,7 @@
                                   encrypts/decrypts all file from that directory
 ```
 ```
-  -u, --unmerge               unmerge signature from file, requires private key
+  -u, --unmerge               unmerge signature from data, requires private key
                                   [ACTION]
 ```
 ```
