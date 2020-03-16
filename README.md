@@ -33,7 +33,7 @@
 ```
 ```
   -m, --merge                 merge signature and original data, use --signaturefile,
-                                  requires private key
+                                  requires public key used in signature
                                   [ACTION]
 ```
 ```
@@ -67,7 +67,6 @@
 ```
   --hashalg=VALUE             type of hashing algorithm, examples: SHA1, SHA256.
                                   default value is SHA256
-```
 ```
 ```
   --keysize=VALUE             when generating key use this to choose its size,
