@@ -11,6 +11,7 @@
 ##### Note: If no output is specified, the default output path is Environment.CurrentDirectory.
 ##### Note: Recommendation is that files are no larger than 10mb, cause it'll take longer.
 ##### Note: When using decrypt on a directory it searches for files that contains ```.encrypted``` on it's name.
+##### Note: Key size must be between 384 and 16384 bits in sizes incremented by 8, e.g.: 384, 392, 400 etc.
 
 ### Options:
 ```
@@ -23,6 +24,11 @@
 ```
 ```
   -h, --help                  show this message and exit 
+                                  [ACTION]
+```
+```
+  -n, -newkey                 generates a new RSA Key with default key size and name,
+                                  exports public and private separetly 
                                   [ACTION]
 ```
 ```
@@ -60,13 +66,14 @@
                                   default value is SHA256
 ```
 ```
-  --keyfilename=VALUE           when generating a new key use this to choose file
+```
+  --keysize=VALUE             when generating key use this to choose its size,
+                                  minimum size is 384 and maximum is 16384, 
+                                  key size must be in increments of 8 bits 
+                                  starting at 384.
+```
+  --keyfilename=VALUE         when generating a new key use this to choose file
                                   name, default is "key"
-```
-```
-  --newkey=VALUE              generates a new RSA Key with specified key size,
-                                  exports public and private separetly 
-                                  [ACTION]
 ```
 ```
   --publickey=VALUE           key used to encrypt and verify signature (.pem file)
@@ -88,17 +95,19 @@
 * Encrypting and signing:
 ```
   rsaencryption -e -s --target=.\\myfile.pdf --publickey=.\\pub.key.pem --privatekey=\\priv.key.pem
-        Encrypts using public key and sign the specified file using default output with specified private key
+        Sign data (using private key) then encrypts (using public key) merged 
+            signature and data using default output
 ```
 * Decrypting:
 ```
   rsaencryption -d --target=.\\myfile.encrypted.pdf --output=.\\ --privatekey=.\\priv.key.pem --verbose
-        Decrypts specified file on specified output using selected key with increase verbosity
+        Decrypts specified file on specified output using selected key 
+            with increase verbosity
 ```
 * Generating new key:
  ```
-  rsaencryption --newkey=4096 -o=.\
-        Generates a new key with chosen size at selected path
+  rsaencryption --newkey -o=.\
+        Generates a new key with default name and size at selected path
 ```
 * Signing only:
 ```

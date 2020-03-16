@@ -451,12 +451,18 @@ namespace RSAEncryption.Encryption
         /// </summary>
         /// <returns></returns>
         /// <param name="keySize">The size of the key in bits. Default 2048.</param>
+        /// <exception cref="ArgumentException">Keysize outside of accepted sizes.</exception>
+        /// <exception cref="CryptographicException">Keysize outside of accepted sizes.</exception>
         public static EncryptionPairKey New(int keySize = 2048)
         {
-            if (keySize < 0)
+            if (keySize > 16384 && keySize < 384)
                 throw new ArgumentException(
-                    message: "Key size must not be negative.",
+                    message: "Key size must be between 384 and 16384 bits.",
                     paramName: nameof(keySize));
+
+            if (keySize % 8 != 0)
+                throw new CryptographicException(
+                    message: "Key size must in increments of 8 bits starting at 384.");
 
             using (var rsa = new RSACryptoServiceProvider(keySize))
             {

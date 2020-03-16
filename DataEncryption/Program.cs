@@ -117,7 +117,8 @@ namespace RSAEncryption
             bool action = false;
             bool unmerge = false;
             bool merge = false;
-            int newKey = -1;
+            bool newKey = false;
+            int keySize = 2048;
             var argsValue = new Dictionary<string, string>();
 
             var opts = new OptionSet
@@ -133,6 +134,9 @@ namespace RSAEncryption
                     v => { help = v != null; action = true; } },
                 { "m|merge", "merge signature with another file, use --signaturefile, requires private key\n[ACTION]",
                     v => { merge = true; action = true; } },
+                // action
+                { "n|newkey", "generates a new RSA Key, default size is 2048bits, exports public and private separetly \n[ACTION]",
+                    v => { newKey = true; action = true; } },
                 { "o|output=", "path to output encrypted files",
                     v => argsValue.Add("output",v) },
                 // action
@@ -151,9 +155,8 @@ namespace RSAEncryption
                     v => hashalg = v },
                 { "keyfilename=", "when generating a new key use this to choose file name, default is \"key\"",
                     v => argsValue.Add("keyfilename",v) },
-                // action
-                { "newkey=", "generates a new RSA Key with specified key size, default size is 2048bits, exports public and private separetly \n[ACTION]",
-                   (int v) => { newKey = v; action = true; } },
+                { "keysize=", "when generating key use this to choose its size, minimum size is 384 and maximum is 16384, key size must be in increments of 8 bits starting at 384.",
+                    (int v) => keySize = v },
                 { "publickey=", "key used to encrypt and verify signature (.pem file)",
                     v => argsValue.Add("publickey",v) },
                 { "privatekey=", "key used to sign and decrypt (.pem file)",
@@ -223,7 +226,7 @@ namespace RSAEncryption
                 }
                 if (merge)
                 {
-                    MergeSignatureAndData(argsValue["signaturefile"], argsValue["target"], output, publicKey, verbose);
+                    MergeSignatureAndData(argsValue["target"], argsValue["signaturefile"], output, publicKey, verbose);
                     return;
                 }
                 if (unmerge)
@@ -231,39 +234,32 @@ namespace RSAEncryption
                     UnmergeSignatureAndData(argsValue["target"], output, privateKey, verbose);
                     return;
                 }
-                if (newKey != -1)
+                if (newKey)
                 {
                     if (argsValue.ContainsKey("keyfilename"))
-                        GenerateKey(newKey, verbose, output, argsValue["keyfilename"]);
+                        GenerateKey(keySize, verbose, output, argsValue["keyfilename"]);
                     else
-                        GenerateKey(newKey, verbose, output);
+                        GenerateKey(keySize, verbose, output);
                     return;
                 }
             }
-            catch (OptionException e)
-            {
-                Console.Write($"{exeName}: ");
-                Console.WriteLine(e.Message.Contains("inner") ? e.InnerException.Message : e.Message);
-                Console.WriteLine($"Try '{exeName} --help' for more information or --examples");
-                return;
-            }
             catch (Exception e)
             {
-                Console.Write($"[*] {exeName}: ");
+                Console.Write($"{exeName}: ");
                 Console.WriteLine(e.Message.Contains("inner") ? e.InnerException.Message : e.Message);
                 Console.WriteLine($"[*] Try '{exeName} --help' for more information or --examples");
                 return;
             }
         }
 
-        public static void GenerateKey(int newKey, bool verbose, string output, string filename = "key")
+        public static void GenerateKey(int keySize, bool verbose, string output, string filename = "key")
         {
             if (verbose)
             {
                 Console.WriteLine("[*] Generating RSA key...");
                 Stopwatch.Restart();
             }
-            var keyNew = EncryptionPairKey.New(newKey);
+            var keyNew = EncryptionPairKey.New(keySize);
             if (verbose)
             {
                 Stopwatch.Stop();
@@ -575,9 +571,10 @@ namespace RSAEncryption
             ShowHelp(opts);
             Console.Write("\n\n");
             Console.WriteLine("Examples:\n");
-            Console.WriteLine($" Encrypting and signing: {exeName} -e -s --target=.\\myfile.pdf --publickey=.\\pub.key.pem --privatekey=\\priv.key.pem\n\tEncrypts using public key and sign the specified file using default output with specified private key");
+            Console.WriteLine($" Encrypting and signing: {exeName} -e -s --target=.\\myfile.pdf --publickey=.\\pub.key.pem --privatekey=\\priv.key.pem\n\tSign data (using private key) then encrypts (using public key) merged signature and data using default output");
             Console.WriteLine($" Decrypting: {exeName} -d --target=.\\myfile.encrypted.pdf --output=.\\ --privatekey=.\\priv.key.pem --verbose\n\tDecrypts specified file on specified output using selected key with increase verbosity");
-            Console.WriteLine($" Generating new key: {exeName} --newkey=4096 -o=.\\\n\tGenerates a new key with chosen size at selected path");
+            Console.WriteLine($" Generating new key: {exeName} --newkey -o=.\\\n\tGenerates a new key with default name and size at selected path");
+            Console.WriteLine($" Generating new key with chosen size and name: {exeName} -n --keysize=1024 --keyfilename=my_1024_key -o=.\\\n\tGenerates a new key with specified name and size at selected path");
             Console.WriteLine($" Signing only: {exeName} --sign --target=.\\myfile.docx --privatekey=.\\priv.key.pem\n\tSigns the specified file using default output with specified private key");
             Console.WriteLine($" Verifying signature: {exeName} -vs --target=.\\myfile.txt --signaturefile=.\\myfile.signature.txt --publickey=.\\pub.key.pem\n\tChecks if signature file is valid");
         }
