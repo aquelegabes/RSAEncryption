@@ -132,7 +132,7 @@ namespace RSAEncryption
                 // action
                 { "h|help", "show this message and exit \n[ACTION]",
                     v => { help = v != null; action = true; } },
-                { "m|merge", "merge signature with another file, use --signaturefile, requires private key\n[ACTION]",
+                { "m|merge", "merge signature with another file, use --signaturefile, requires public key used in signature\n[ACTION]",
                     v => { merge = true; action = true; } },
                 // action
                 { "n|newkey", "generates a new RSA Key, default size is 2048bits, exports public and private separetly \n[ACTION]",

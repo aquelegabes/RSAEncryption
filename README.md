@@ -74,6 +74,7 @@
                                   key size must be in increments of 8 bits 
                                   starting at 512.
 ```
+```
   --keyfilename=VALUE         when generating a new key use this to choose file
                                   name, default is "key"
 ```
