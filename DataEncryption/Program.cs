@@ -34,7 +34,7 @@ namespace RSAEncryption
                 Stopwatch.Restart();
             }
 
-            var decrypted = key.DecryptFile(file);
+            var decrypted = key.DecryptRijndael(file);
 
             if (verbose)
             {
@@ -66,7 +66,7 @@ namespace RSAEncryption
                 string mergedPath = MergeSignatureAndData(target, signatureFilePath, output, keyToSign, verbose);
                 FileManipulation.OpenFile(mergedPath, out var mergedFile);
 
-                var encrypted = keyToEncrypt.EncryptFile(mergedFile);
+                var encrypted = keyToEncrypt.EncryptRijndael(mergedFile);
                 if (verbose)
                 {
                     Stopwatch.Stop();
@@ -89,7 +89,7 @@ namespace RSAEncryption
                     Stopwatch.Restart();
                 }
 
-                var encrypted = keyToEncrypt.EncryptFile(file);
+                var encrypted = keyToEncrypt.EncryptRijndael(file);
                 if (verbose)
                 {
                     Stopwatch.Stop();
@@ -144,7 +144,7 @@ namespace RSAEncryption
                     v => { sign = v != null; action = true; } },
                 { "t|target=", "file or directory to be encrypted, decrypted or to verify its signature if directory encrypts all file from that directory",
                     v => argsValue.Add("target",v) },
-                { "u|unmerge", "unmerge signature from file, requires private key\n[ACTION]",
+                { "u|unmerge", "unmerge signature from file, requires public key used in signature, use --hashalg to identify wich hashing algorithm was used and verify signature (if none was specified uses default: SHA256)\n[ACTION]",
                     v => { unmerge = true; action = true; } },
                 // action
                 { "v|verifysignature", "verify if signed data is trustworthy \n[ACTION], use --target for signed data and --signaturefile for signature file",
@@ -155,7 +155,7 @@ namespace RSAEncryption
                     v => hashalg = v },
                 { "keyfilename=", "when generating a new key use this to choose file name, default is \"key\"",
                     v => argsValue.Add("keyfilename",v) },
-                { "keysize=", "when generating key use this to choose its size, minimum size is 384 and maximum is 16384, key size must be in increments of 8 bits starting at 384.",
+                { "keysize=", "when generating key use this to choose its size, minimum size is 512 and maximum is 16384, key size must be in increments of 8 bits starting at 384.",
                     (int v) => keySize = v },
                 { "publickey=", "key used to encrypt and verify signature (.pem file)",
                     v => argsValue.Add("publickey",v) },
@@ -195,15 +195,20 @@ namespace RSAEncryption
                     return;
                 }
 
+                Console.WriteLine($"[*] Starting {exeName}...");
+                // showing signing issues
+                if (sign)
+                {
+                    Console.WriteLine("[*] Warning: Some hashing algorithms may have issues depending on the key size");
+                }
+
                 var output = argsValue.ContainsKey("output") ? argsValue["output"] : Environment.CurrentDirectory;
+                hashalg = string.IsNullOrWhiteSpace(hashalg) ? "SHA256" : hashalg.ToUpper();
                 string publicKeyPath = argsValue.ContainsKey("publickey") ? argsValue["publickey"] : null;
                 string privateKeyPath = argsValue.ContainsKey("privatekey") ? argsValue["privatekey"] : null;
                 var publicKey = string.IsNullOrWhiteSpace(publicKeyPath) ? null : EncryptionPairKey.FromPEMFile(publicKeyPath);
                 var privateKey = string.IsNullOrWhiteSpace(privateKeyPath) ? null : EncryptionPairKey.FromPEMFile(privateKeyPath, true);
 
-                hashalg = string.IsNullOrWhiteSpace(hashalg) ? "SHA256" : hashalg.ToUpper();
-
-                Console.WriteLine($"[*] Starting {exeName}...");
                 if (encrypt)
                 {
                     EncryptOption(argsValue["target"], sign, publicKey, verbose, output, privateKey);
@@ -231,7 +236,7 @@ namespace RSAEncryption
                 }
                 if (unmerge)
                 {
-                    UnmergeSignatureAndData(argsValue["target"], output, privateKey, verbose);
+                    UnmergeSignatureAndData(argsValue["target"], output, publicKey, hashalg, verbose);
                     return;
                 }
                 if (newKey)
@@ -254,6 +259,11 @@ namespace RSAEncryption
 
         public static void GenerateKey(int keySize, bool verbose, string output, string filename = "key")
         {
+            if (string.IsNullOrWhiteSpace(output) || !Directory.Exists(output))
+                throw new ArgumentException(
+                    message: "Invalid output path.",
+                    paramName: nameof(output));
+
             if (verbose)
             {
                 Console.WriteLine("[*] Generating RSA key...");
@@ -277,15 +287,17 @@ namespace RSAEncryption
 
         public static void Sign(string target, EncryptionPairKey privateKey, string output, bool verbose)
         {
-            if (string.IsNullOrWhiteSpace(output))
-                output = Environment.CurrentDirectory;
+            if (string.IsNullOrWhiteSpace(output) || !Directory.Exists(output))
+                throw new ArgumentException(
+                    message: "Invalid output path.",
+                    paramName: nameof(output));
 
             if (privateKey == null)
                 throw new ArgumentNullException(
                     message: "In order to sign data, private key must not be null.",
                     paramName: nameof(privateKey));
 
-            if (!File.Exists(target))
+            if (!File.Exists(target) || string.IsNullOrWhiteSpace(target))
                 throw new ArgumentException(
                     message: "When signing target must be an existent file.",
                     paramName: nameof(target));
@@ -372,8 +384,10 @@ namespace RSAEncryption
 
         public static void DecryptOption(string target, EncryptionPairKey key, string output, bool verbose)
         {
-            if (string.IsNullOrWhiteSpace(output))
-                output = Environment.CurrentDirectory;
+            if (string.IsNullOrWhiteSpace(output) || !Directory.Exists(output))
+                throw new ArgumentException(
+                    message: "Invalid output path.",
+                    paramName: nameof(output));
 
             if (string.IsNullOrWhiteSpace(target))
                 throw new ArgumentNullException(
@@ -411,6 +425,11 @@ namespace RSAEncryption
 
         public static void EncryptOption(string target, bool sign, EncryptionPairKey keyToEncrypt, bool verbose, string output, EncryptionPairKey keyToSign = null)
         {
+            if (string.IsNullOrWhiteSpace(output) || !Directory.Exists(output))
+                throw new ArgumentException(
+                    message: "Invalid output path.",
+                    paramName: nameof(output));
+
             if (string.IsNullOrWhiteSpace(target))
                 throw new ArgumentNullException(
                     message: "Target cannot be null.",
@@ -448,17 +467,17 @@ namespace RSAEncryption
 
         public static string MergeSignatureAndData(string targetPath, string signaturePath, string output, EncryptionPairKey publicKey, bool verbose = false)
         {
-            if (!File.Exists(targetPath))
+            if (string.IsNullOrWhiteSpace(targetPath) || !File.Exists(targetPath))
                 throw new ArgumentException(
                     message: "Target file must exists.",
                     paramName: nameof(targetPath));
-            if (!File.Exists(signaturePath))
+            if (string.IsNullOrWhiteSpace(signaturePath) || !File.Exists(signaturePath) )
                 throw new ArgumentException(
                     message: "Signature path must exists.",
                     paramName: nameof(signaturePath));
-            if (!Directory.Exists(output))
+            if (string.IsNullOrWhiteSpace(output) || !Directory.Exists(output))
                 throw new ArgumentException(
-                    message: "Output must exists.",
+                    message: "Invalid output path.",
                     paramName: nameof(output));
             if (publicKey == null)
                 throw new NullReferenceException(
@@ -497,28 +516,27 @@ namespace RSAEncryption
             return $"{output}\\{filename}.merged";
         }
 
-        public static void UnmergeSignatureAndData(string targetPath, string output, EncryptionPairKey privateKey, bool verbose = false)
+        public static void UnmergeSignatureAndData(string targetPath, string output, EncryptionPairKey publicSignatureKey, string hashalg, bool verbose = false)
         {
-            if (!File.Exists(targetPath))
+            if (!File.Exists(targetPath) || string.IsNullOrWhiteSpace(targetPath))
                 throw new ArgumentException(
                     message: "Target file must exists.",
                     paramName: nameof(targetPath));
-            if (!Directory.Exists(output))
+            if (string.IsNullOrWhiteSpace(output) || !Directory.Exists(output))
                 throw new ArgumentException(
-                    message: "Output must exists.",
+                    message: "Invalid output path.",
                     paramName: nameof(output));
-            if (privateKey == null)
+            if (publicSignatureKey == null)
                 throw new NullReferenceException(
                     message: "Key must not be null.");
-            if (privateKey?.PublicOnly == true)
-                throw new ArgumentException(
-                    message: "A private key is required.",
-                    paramName: nameof(privateKey));
 
             var rnd = new Random();
             byte[] b = new byte[4];
             rnd.NextBytes(b);
-            int signatureSize = privateKey.SignData(b, hashalg).Length;
+
+            // getting signature size based on key size
+            // (not sure if correct)
+            int signatureSize = EncryptionPairKey.New(publicSignatureKey.KeySize).SignData(b, hashalg).Length;
 
             if (verbose)
             {
@@ -538,6 +556,10 @@ namespace RSAEncryption
                 ms.Read(data, 0, data.Length);
             }
 
+            if (!publicSignatureKey.VerifySignedData(data, signature, hashalg))
+                throw new InvalidDataException(
+                    message: "Signature is not valid or do not exist for this file.");
+
             if (verbose)
             {
                 Stopwatch.Stop();
@@ -547,10 +569,10 @@ namespace RSAEncryption
             string fileName = Path.GetFileNameWithoutExtension(targetPath);
             string fileExt = Path.GetExtension(targetPath);
 
-            Console.WriteLine($"[*] Saving signature as: {output}\\{fileName}.signature");
-            Console.WriteLine($"[*] Saving data as: {output}\\{fileName}.data{fileExt}");
-            FileManipulation.SaveFile(signature, output, $"{fileName}.signature{fileExt}");
-            FileManipulation.SaveFile(data, output, $"{fileName}.data{fileExt}");
+            Console.WriteLine($"[*] Saving signature as: {output}\\{fileName}.unmerged.signature");
+            Console.WriteLine($"[*] Saving data as: {output}\\{fileName}.unmerged.data{fileExt}");
+            FileManipulation.SaveFile(signature, output, $"{fileName}.unmerged.signature{fileExt}");
+            FileManipulation.SaveFile(data, output, $"{fileName}.unmerged.data{fileExt}");
         }
 
         public static void ShowHelp(OptionSet opts)

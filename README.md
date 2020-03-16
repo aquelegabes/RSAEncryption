@@ -49,7 +49,10 @@
                                   encrypts/decrypts all file from that directory
 ```
 ```
-  -u, --unmerge               unmerge signature from data, requires private key
+  -u, --unmerge               unmerge signature from data, requires public key used
+                                  used in signature, use --hashalg to identify wich
+                                  hashing algorithm was used and verify signature
+                                  (if none was specified uses default: SHA256)
                                   [ACTION]
 ```
 ```

@@ -27,11 +27,11 @@ namespace RSAEncryption.Encryption
 
         /// <summary>
         /// Encrypts a file using a <see cref="RSACryptoServiceProvider"/> public key.
-        /// In combination with <see cref="RijndaelManaged"/>.
+        /// In combination with <see cref="RijndaelManaged"/> algorithm.
         /// </summary>
         /// <param name="file">Bytes from the file.</param>
         /// <returns></returns>
-        public byte[] EncryptFile(byte[] file)
+        public byte[] EncryptRijndael(byte[] file)
         {
             // Importing 
             using var rsa = new RSACryptoServiceProvider();
@@ -99,11 +99,11 @@ namespace RSAEncryption.Encryption
 
         /// <summary>
         /// Decrypts a file using a <see cref="RSACryptoServiceProvider"/> private key.
-        /// In combination with <see cref="RijndaelManaged"/>.
+        /// In combination with <see cref="RijndaelManaged"/> algorithm.
         /// </summary>
         /// <param name="encryptedFile">Bytes from the file.</param>
         /// <returns></returns>
-        public byte[] DecryptFile(byte[] encryptedFile)
+        public byte[] DecryptRijndael(byte[] encryptedFile)
         {
             if (this.PublicOnly)
                 throw new InvalidOperationException(
@@ -455,9 +455,9 @@ namespace RSAEncryption.Encryption
         /// <exception cref="CryptographicException">Keysize outside of accepted sizes.</exception>
         public static EncryptionPairKey New(int keySize = 2048)
         {
-            if (keySize > 16384 && keySize < 384)
+            if (keySize > 16384 && keySize < 512)
                 throw new ArgumentException(
-                    message: "Key size must be between 384 and 16384 bits.",
+                    message: "Key size must be between 512 and 16384 bits.",
                     paramName: nameof(keySize));
 
             if (keySize % 8 != 0)

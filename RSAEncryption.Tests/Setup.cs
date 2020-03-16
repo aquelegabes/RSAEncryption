@@ -73,7 +73,7 @@ namespace RSAEncryption.Tests
                 string encryptedFileName = Path.GetFileNameWithoutExtension(filePath) + ".encrypted.txt";
                 string encryptedPathFile = Path.Combine(testFolders["encrypted"], encryptedFileName);
 
-                byte[] encryptedFile = key.EncryptFile(originalFile);
+                byte[] encryptedFile = key.EncryptRijndael(originalFile);
                 File.WriteAllBytes(encryptedPathFile, encryptedFile);
                 i++;
             } while (i < (multiple ? files : 1));
@@ -92,6 +92,28 @@ namespace RSAEncryption.Tests
             string output = Path.Combine(testFolders["encrypted"], $"{fileName}.signature{fileExt}");
             var signatureData = key.SignData(encryptedFile, hashalg);
             File.WriteAllBytes(output, signatureData);
+        }
+
+        public static void SetMergedFile(Dictionary<string, string> testFolders, string hashalg)
+        {
+            SetSignatureFile(testFolders, hashalg);
+
+            string output = testFolders["encrypted"];
+            string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["original"]).First());
+            string originalFilePath = Directory.GetFiles(testFolders["original"]).First();
+            string signatureFilePath = Directory.GetFiles(testFolders["encrypted"], $"*{fileName}.sign*").First();
+
+            FileManipulation.OpenFile(originalFilePath, out var data);
+            FileManipulation.OpenFile(signatureFilePath, out var signature);
+
+            byte[] mergedFile = new byte[signature.Length + data.Length];
+            using (var ms = new MemoryStream(mergedFile))
+            {
+                ms.Write(signature, 0, signature.Length);
+                ms.Write(data, 0, data.Length);
+            }
+
+            File.WriteAllBytes($"{output}\\{fileName}.merged", mergedFile);
         }
     }
 }

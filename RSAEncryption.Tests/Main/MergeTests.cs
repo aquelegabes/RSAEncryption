@@ -1,0 +1,96 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using Xunit;
+
+namespace RSAEncryption.Tests.Main
+{
+    public class MergeTests
+    {
+        [Fact]
+        public void Merge_ArgumentExc()
+        {
+            Setup.Initialize(out var testFolders);
+            Setup.SetSignatureFile(testFolders);
+
+            string output = testFolders["encrypted"];
+            var pubKey = Encryption.EncryptionPairKey.FromPEMFile($"{Setup.AbsolutePath}\\pub.key.pem");
+            string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["original"]).First());
+            string originalFilePath = Directory.GetFiles(testFolders["original"]).First();
+            string signatureFilePath = Directory.GetFiles(testFolders["encrypted"], $"*{fileName}.sign*").First();
+
+            // invalid data path
+            Assert.Throws<ArgumentException>(()
+                => Program.MergeSignatureAndData(null, signatureFilePath, output, pubKey));
+
+            // invalid signature path
+            Assert.Throws<ArgumentException>(()
+                => Program.MergeSignatureAndData(originalFilePath, null, output, pubKey));
+
+            // invalid output path
+            Assert.Throws<ArgumentException>(()
+                => Program.MergeSignatureAndData(originalFilePath, signatureFilePath, null, pubKey));
+        }
+
+        [Fact]
+        public void Merge_NullKey_Exc()
+        {
+            Setup.Initialize(out var testFolders);
+            Setup.SetSignatureFile(testFolders);
+
+            string output = testFolders["encrypted"];
+            string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["original"]).First());
+            string originalFilePath = Directory.GetFiles(testFolders["original"]).First();
+            string signatureFilePath = Directory.GetFiles(testFolders["encrypted"], $"*{fileName}.sign*").First();
+
+            Assert.Throws<NullReferenceException>(()
+                => Program.MergeSignatureAndData(originalFilePath, signatureFilePath, output, null));
+        }
+
+        [Fact]
+        public void Merge_InvalidSignature_Exc()
+        {
+            Setup.Initialize(out var testFolders);
+            Setup.SetSignatureFile(testFolders);
+
+            string output = testFolders["encrypted"];
+            var pubKey = Encryption.EncryptionPairKey.FromPEMFile($"{Setup.AbsolutePath}\\pub.key.pem");
+            string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["original"]).First());
+            string originalFilePath = Directory.GetFiles(testFolders["original"]).First();
+            string signatureFilePath = Directory.GetFiles(testFolders["encrypted"], $"*{fileName}.sign*").First();
+
+            Assert.Throws<InvalidDataException>(()
+                => Program.MergeSignatureAndData(originalFilePath, originalFilePath, output, pubKey));
+        }
+
+        [Fact]
+        public void Main_Merge_Verbosity_OK()
+        {
+            Setup.Initialize(out var testFolders);
+            Setup.SetSignatureFile(testFolders);
+
+            string output = testFolders["encrypted"];
+            var pubKey = $"{Setup.AbsolutePath}\\pub.key.pem";
+            string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["original"]).First());
+            string originalFilePath = Directory.GetFiles(testFolders["original"]).First();
+            string signatureFilePath = Directory.GetFiles(testFolders["encrypted"], $"*{fileName}.sign*").First();
+
+            var args = new string[]
+            {
+                "--merge", "--verbose",
+                $"--output={output}",
+                $"--publickey={pubKey}",
+                $"--target={originalFilePath}",
+                $"--signaturefile={signatureFilePath}",
+            };
+
+            Program.Main(args);
+
+            string outputFilePath = Directory.GetFiles(output, "*merge*").First();
+
+            Assert.False(string.IsNullOrWhiteSpace(outputFilePath));
+        }
+    }
+}
