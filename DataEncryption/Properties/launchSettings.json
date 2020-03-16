@@ -2,7 +2,7 @@
   "profiles": {
     "RSAEncryption": {
       "commandName": "Project",
-      "commandLineArgs": "--newkey=2048 --keyfilename=\"gabeiel_2048\""
+      "commandLineArgs": "-d --target=.\\texto1.encrypted.txt --privatekey=.\\priv.key.pem"
     }
   }
 }

@@ -14,15 +14,20 @@
 
 ### Options:
 ```
-  -e, --encrypt               encrypts the data, requires public key 
-                                  [ACTION]
-```
-```
   -d, --decrypt               decrypts the encrypted data, requires private key 
                                   [ACTION]
 ```
 ```
+  -e, --encrypt               encrypts the data, requires public key 
+                                  [ACTION]
+```
+```
   -h, --help                  show this message and exit 
+                                  [ACTION]
+```
+```
+  -m, --merge                 merge signature with another file, use --signaturefile,
+                                  requires private key
                                   [ACTION]
 ```
 ```
@@ -38,7 +43,13 @@
                                   encrypts/decrypts all file from that directory
 ```
 ```
+  -u, --unmerge               unmerge signature from file, requires private key
+                                  [ACTION]
+```
+```
   -v, --verifysignature       verify if signed data is trustworthy, requires public key
+                                  [ACTION], use --target for signed data and 
+                                  --signaturefile for signature file
 ```
 ```
   -x, --examples              show specific examples 
@@ -58,17 +69,16 @@
                                   [ACTION]
 ```
 ```
-  --publickey=VALUE           path where public key is stored (.pem file)
+  --publickey=VALUE           key used to encrypt and verify signature (.pem file)
 ```
 ```
-  --privatekey=VALUE          path where private key is stored (.pem file)
+  --privatekey=VALUE          key used to sign and decrypt (.pem file)
 ```
 ```
-  --signaturefile=VALUE       signature file generated along side with its
-                                  encryption
+  --signaturefile=VALUE       signature file generated based on encrypted file
 ```
 ```
-  --verbose                   increase debug message verbosity
+  --verbose                   increase verbosity
 ```
 ```
   --version                   shows version 
@@ -77,12 +87,12 @@
 ### Examples:
 * Encrypting and signing:
 ```
-  rsaencryption -e -s --target=.\myfile.pdf --publickey=.\pubkey.pem
-        Encrypts and sign the specified file using default output with specified public key
+  rsaencryption -e -s --target=.\\myfile.pdf --publickey=.\\pub.key.pem --privatekey=\\priv.key.pem
+        Encrypts using public key and sign the specified file using default output with specified private key
 ```
 * Decrypting:
 ```
-  rsaencryption -d --target=.\myfile.encrypted.pdf --output=.\ --privatekey=.\privkey.pem --verbose
+  rsaencryption -d --target=.\\myfile.encrypted.pdf --output=.\\ --privatekey=.\\priv.key.pem --verbose
         Decrypts specified file on specified output using selected key with increase verbosity
 ```
 * Generating new key:
@@ -92,11 +102,11 @@
 ```
 * Signing only:
 ```
-  rsaencryption --sign --target=.\myfile.encrypted.docx --privatekey=.\privkey.pem
+  rsaencryption  --sign --target=.\\myfile.docx --privatekey=.\\priv.key.pem
         Signs the specified file using default output with specified private key
 ```
 * Verifying signature: 
 ```
-  rsaencryption -vs --target=.\myfile.encrypted.txt --signaturefile=.\myfile.signature.txt --publickey=.\pubkey.pem
+  rsaencryption -vs --target=.\\myfile.txt --signaturefile=.\\myfile.signature.txt --publickey=.\\pub.key.pem
         Checks if signature file is valid
 ```

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace RSAEncryption.Tests
 {
@@ -72,10 +73,25 @@ namespace RSAEncryption.Tests
                 string encryptedFileName = Path.GetFileNameWithoutExtension(filePath) + ".encrypted.txt";
                 string encryptedPathFile = Path.Combine(testFolders["encrypted"], encryptedFileName);
 
-                byte[] encryptedFile = RSAMethods.EncryptFile(originalFile, key);
+                byte[] encryptedFile = key.EncryptFile(originalFile);
                 File.WriteAllBytes(encryptedPathFile, encryptedFile);
                 i++;
             } while (i < (multiple ? files : 1));
+        }
+
+        public static void SetSignatureFile(Dictionary<string, string> testFolders, string hashalg = "SHA256")
+        {
+            SetEncryptedFiles(testFolders);
+            var key = EncryptionPairKey.FromPEMFile(@$"{AbsolutePath}\priv.key.pem", true);
+
+            var filePath = Directory.GetFiles(testFolders["original"]).First();
+            var fileName = Path.GetFileNameWithoutExtension(filePath).Replace(".encrypted", "");
+            var fileExt = Path.GetExtension(filePath);
+            FileManipulation.OpenFile(filePath, out var encryptedFile);
+
+            string output = Path.Combine(testFolders["encrypted"], $"{fileName}.signature{fileExt}");
+            var signatureData = key.SignData(encryptedFile, hashalg);
+            File.WriteAllBytes(output, signatureData);
         }
     }
 }

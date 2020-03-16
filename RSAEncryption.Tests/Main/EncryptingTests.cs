@@ -39,6 +39,11 @@ namespace RSAEncryption.Tests.Main
         {
             Setup.Initialize(out var testFolders);
 
+            string hashalg = "SHA256";
+
+            var privKey = EncryptionPairKey.FromPEMFile($"{Setup.AbsolutePath}\\priv.key.pem", true);
+            int signatureSize = privKey.SignData(new byte[] { 114 }, hashalg).Length;
+
             string targetFilePath = Directory.GetFiles(testFolders["original"]).First();
             string outputFilePath = Path.Combine(
                 path1: testFolders["encrypted"],
@@ -52,8 +57,10 @@ namespace RSAEncryption.Tests.Main
             {
                 "-e", "-s", "--verbose",
                 $@"--privatekey={Setup.AbsolutePath}\priv.key.pem",
+                $@"--publickey={Setup.AbsolutePath}\pub.key.pem",
                 $"--output={testFolders["encrypted"]}",
                 $"--target={targetFilePath}",
+                $"--hashalg={hashalg}",
             };
 
             Program.Main(args);
@@ -66,7 +73,7 @@ namespace RSAEncryption.Tests.Main
             var signatureFileInfo = new FileInfo(signatureFilePath);
 
             Assert.True(outputFileInfo.Length >= targetFileInfo.Length);
-            Assert.True(signatureFileInfo.Length == 256);
+            Assert.Equal(signatureFileInfo.Length, signatureSize);
         }
 
         [Fact]
@@ -103,12 +110,19 @@ namespace RSAEncryption.Tests.Main
         {
             Setup.Initialize(out var testFolders);
 
+            string hashalg = "SHA256";
+
+            var privKey = EncryptionPairKey.FromPEMFile($"{Setup.AbsolutePath}\\priv.key.pem", true);
+            int signatureSize = privKey.SignData(new byte[] { 114 }, hashalg).Length;
+
             string[] args =
             {
                 "-e", "-s", "--verbose",
                 $@"--privatekey={Setup.AbsolutePath}\priv.key.pem",
+                $@"--publickey={Setup.AbsolutePath}\pub.key.pem",
                 $"--output={testFolders["encrypted"]}",
                 $"--target={testFolders["original"]}",
+                $"--hashalg={hashalg}",
             };
 
             Program.Main(args);
@@ -129,7 +143,7 @@ namespace RSAEncryption.Tests.Main
                 var signatureFileInfo = new FileInfo(generatedSignatureFiles[i]);
 
                 Assert.True(outputFileInfo.Length >= targetFileInfo.Length);
-                Assert.True(signatureFileInfo.Length == 256);
+                Assert.Equal(signatureFileInfo.Length, signatureSize);
             }
         }
 
@@ -144,7 +158,7 @@ namespace RSAEncryption.Tests.Main
             Assert.NotNull(key);
 
             Assert.Throws<InvalidOperationException>(()
-                => Program.Encrypt(targetFilePath, true, key, false, testFolders["encrypted"]));
+                => Program.EncryptOption(targetFilePath, true, key, false, testFolders["encrypted"]));
         }
 
         [Fact]
@@ -158,7 +172,7 @@ namespace RSAEncryption.Tests.Main
             Assert.NotNull(key);
 
             Assert.Throws<ArgumentException>(()
-                => Program.Encrypt(targetFilePath, false, key, false, testFolders["encrypted"]));
+                => Program.EncryptOption(targetFilePath, false, key, false, testFolders["encrypted"]));
         }
 
         [Fact]
@@ -172,7 +186,7 @@ namespace RSAEncryption.Tests.Main
             Assert.NotNull(key);
 
             Assert.Throws<ArgumentException>(()
-                => Program.Encrypt(targetFilePath, false, key, false, @$"{Setup.AbsolutePath}\invalidpath"));
+                => Program.EncryptOption(targetFilePath, false, key, false, @$"{Setup.AbsolutePath}\invalidpath"));
         }
 
         [Fact]
@@ -185,7 +199,7 @@ namespace RSAEncryption.Tests.Main
             Assert.NotNull(key);
 
             Assert.Throws<ArgumentNullException>(()
-                => Program.Encrypt("", false, key, false, testFolders["encrypted"]));
+                => Program.EncryptOption("", false, key, false, testFolders["encrypted"]));
         }
 
         [Fact]
@@ -196,7 +210,7 @@ namespace RSAEncryption.Tests.Main
             string targetFilePath = Directory.GetFiles(testFolders["original"]).First();
 
             Assert.Throws<ArgumentNullException>(()
-                => Program.Encrypt(targetFilePath, false, null, false, testFolders["encrypted"]));
+                => Program.EncryptOption(targetFilePath, false, null, false, testFolders["encrypted"]));
         }
     }
 }

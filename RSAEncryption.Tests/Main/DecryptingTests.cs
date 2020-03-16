@@ -95,7 +95,7 @@ namespace RSAEncryption.Tests.Main
             Assert.NotNull(key);
 
             Assert.Throws<ArgumentException>(()
-                => Program.Decrypt(targetFilePath, key, testFolders["encrypted"], false));
+                => Program.DecryptOption(targetFilePath, key, testFolders["encrypted"], false));
         }
 
         [Fact]
@@ -110,7 +110,7 @@ namespace RSAEncryption.Tests.Main
             Assert.NotNull(key);
 
             Assert.Throws<ArgumentException>(()
-                => Program.Decrypt(targetFilePath, key, @$"{Setup.AbsolutePath}\invalidpath",false));
+                => Program.DecryptOption(targetFilePath, key, @$"{Setup.AbsolutePath}\invalidpath",false));
         }
 
         [Fact]
@@ -124,7 +124,7 @@ namespace RSAEncryption.Tests.Main
             Assert.NotNull(key);
 
             Assert.Throws<ArgumentNullException>(()
-                => Program.Decrypt("", key, testFolders["encrypted"], false));
+                => Program.DecryptOption("", key, testFolders["encrypted"], false));
         }
 
         [Fact]
@@ -136,7 +136,7 @@ namespace RSAEncryption.Tests.Main
             string targetFilePath = Directory.GetFiles(testFolders["encrypted"]).First();
 
             Assert.Throws<ArgumentNullException>(()
-                => Program.Decrypt(targetFilePath, null, testFolders["decrypted"], false));
+                => Program.DecryptOption(targetFilePath, null, testFolders["decrypted"], false));
         }
 
         [Fact]
@@ -151,7 +151,7 @@ namespace RSAEncryption.Tests.Main
             Assert.NotNull(key);
 
             Assert.Throws<InvalidOperationException>(()
-                => Program.Decrypt(targetFilePath, key, testFolders["decrypted"], false));
+                => Program.DecryptOption(targetFilePath, key, testFolders["decrypted"], false));
         }
     }
 }

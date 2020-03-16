@@ -1,5 +1,6 @@
 ﻿using Mono.Options;
 using RSAEncryption.Encryption;
+using RSAEncryption.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,6 +15,94 @@ namespace RSAEncryption
         static readonly Stopwatch Stopwatch = new Stopwatch();
         static readonly string exeName = Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
         static string hashalg = "SHA256";
+        static void Decrypt(string target, EncryptionPairKey key, string output, bool verbose)
+        {
+            string fileName = Path.GetFileNameWithoutExtension(target);
+            fileName = fileName.Replace(".encrypted", "");
+            string fileExt = Path.GetExtension(target);
+
+            if (verbose)
+            {
+                Console.WriteLine("[*] Storing file in memory...");
+            }
+
+            FileManipulation.OpenFile(target, out var file);
+            if (verbose)
+            {
+                Console.WriteLine("[*] File in memory...");
+                Console.WriteLine("[*] Starting decryption...");
+                Stopwatch.Restart();
+            }
+
+            var decrypted = key.DecryptFile(file);
+
+            if (verbose)
+            {
+                Stopwatch.Stop();
+                Console.WriteLine($"[*] Elapsed time for decryption {Stopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine("[*] Saving file...");
+            }
+
+            FileManipulation.SaveFile(decrypted, output, $"{fileName}.decrypted{fileExt}", true);
+            Console.WriteLine($"[*] File saved as \"{fileName}.decrypted{fileExt}\" at {output}");
+        }
+        static void Encrypt(string target, bool sign, EncryptionPairKey keyToEncrypt, bool verbose, string output, EncryptionPairKey keyToSign = null)
+        {
+            string fileName = Path.GetFileNameWithoutExtension(target);
+            string fileExt = Path.GetExtension(target);
+
+            if (sign)
+            {
+                Sign(target, keyToSign, output, verbose);
+
+                if (verbose)
+                {
+                    Console.WriteLine("[*] Storing original file and signature in memory...");
+                    Console.WriteLine("[*] Merging and encrypting...");
+                    Stopwatch.Restart();
+                }
+                var signatureFilePath = Path.Combine(output, Path.GetFileName(target.Replace(fileExt, $".signature{fileExt}")));
+
+                string mergedPath = MergeSignatureAndData(target, signatureFilePath, output, keyToSign, verbose);
+                FileManipulation.OpenFile(mergedPath, out var mergedFile);
+
+                var encrypted = keyToEncrypt.EncryptFile(mergedFile);
+                if (verbose)
+                {
+                    Stopwatch.Stop();
+                    Console.WriteLine($"[*] Elapsed time for merging and encrypting {Stopwatch.ElapsedMilliseconds} ms");
+                    Console.WriteLine("[*] Saving file...");
+                }
+
+                FileManipulation.SaveFile(encrypted, output, $"{fileName}.encrypted{fileExt}", true);
+                Console.WriteLine($"[*] File saved as \"{fileName}.encrypted{fileExt}\" at {output}");
+            }
+            else
+            {
+                if (verbose)
+                    Console.WriteLine("[*] Storing file in memory...");
+                FileManipulation.OpenFile(target, out var file);
+                if (verbose)
+                {
+                    Console.WriteLine("[*] File in memory...");
+                    Console.WriteLine("[*] Starting encryption...");
+                    Stopwatch.Restart();
+                }
+
+                var encrypted = keyToEncrypt.EncryptFile(file);
+                if (verbose)
+                {
+                    Stopwatch.Stop();
+                    Console.WriteLine($"[*] Elapsed time for encryption {Stopwatch.ElapsedMilliseconds} ms");
+                }
+
+                if (verbose)
+                    Console.WriteLine("[*] Saving file...");
+
+                FileManipulation.SaveFile(encrypted, output, $"{fileName}.encrypted{fileExt}", true);
+                Console.WriteLine($"[*] File saved as \"{fileName}.encrypted{fileExt}\" at {output}");
+            }
+        }
 
         public static void Main(string[] args)
         {
@@ -26,29 +115,35 @@ namespace RSAEncryption
             bool verifySignature = false;
             bool version = false;
             bool action = false;
+            bool unmerge = false;
+            bool merge = false;
             int newKey = -1;
             var argsValue = new Dictionary<string, string>();
 
             var opts = new OptionSet
             {
                 // action
-                { "e|encrypt", "encrypts the data \n[ACTION]",
-                    v => { encrypt = v != null; action = true; } },
-                // action
                 { "d|decrypt", "decrypts the encrypted data, requires private key \n[ACTION]",
                     v => { decrypt = v != null; action = true; } },
                 // action
+                { "e|encrypt", "encrypts the data, if used with -s merge signature to encrypted file \n[ACTION]",
+                    v => { encrypt = v != null; action = true; } },
+                // action
                 { "h|help", "show this message and exit \n[ACTION]",
                     v => { help = v != null; action = true; } },
+                { "m|merge", "merge signature with another file, use --signaturefile, requires private key\n[ACTION]",
+                    v => { merge = true; action = true; } },
                 { "o|output=", "path to output encrypted files",
                     v => argsValue.Add("output",v) },
                 // action
-                { "s|sign", "signs the encrypted data, requires private key \n[ACTION]",
+                { "s|sign", "signs data, requires private key \n[ACTION]",
                     v => { sign = v != null; action = true; } },
                 { "t|target=", "file or directory to be encrypted, decrypted or to verify its signature if directory encrypts all file from that directory",
                     v => argsValue.Add("target",v) },
+                { "u|unmerge", "unmerge signature from file, requires private key\n[ACTION]",
+                    v => { unmerge = true; action = true; } },
                 // action
-                { "v|verifysignature", "verify if signed data is trustworthy \n[ACTION]",
+                { "v|verifysignature", "verify if signed data is trustworthy \n[ACTION], use --target for signed data and --signaturefile for signature file",
                     v => { verifySignature = v != null; action = true; } },
                 { "x|examples", "show specific examples \n[ACTION]",
                     v => { examples = v != null; action = true; } },
@@ -59,11 +154,11 @@ namespace RSAEncryption
                 // action
                 { "newkey=", "generates a new RSA Key with specified key size, default size is 2048bits, exports public and private separetly \n[ACTION]",
                    (int v) => { newKey = v; action = true; } },
-                { "publickey=", "path where public key is stored (.pem file)",
+                { "publickey=", "key used to encrypt and verify signature (.pem file)",
                     v => argsValue.Add("publickey",v) },
-                { "privatekey=", "path where private key is stored (.pem file)",
+                { "privatekey=", "key used to sign and decrypt (.pem file)",
                     v => argsValue.Add("privatekey",v) },
-                { "signaturefile=", "signature file generated along side with its encryption",
+                { "signaturefile=", "signature file generated based on encrypted file",
                     v => argsValue.Add("signaturefile", v) },
                 { "verbose", "increase debug message verbosity",
                     v => verbose = v != null },
@@ -98,31 +193,42 @@ namespace RSAEncryption
                 }
 
                 var output = argsValue.ContainsKey("output") ? argsValue["output"] : Environment.CurrentDirectory;
-                bool isPublic = argsValue.ContainsKey("publickey");
-                var pathKey = isPublic ? argsValue["publickey"] : argsValue.ContainsKey("privatekey") ? argsValue["privatekey"] : "";
-                var key = !string.IsNullOrWhiteSpace(pathKey) ? EncryptionPairKey.FromPEMFile(pathKey, !isPublic) : null;
+                string publicKeyPath = argsValue.ContainsKey("publickey") ? argsValue["publickey"] : null;
+                string privateKeyPath = argsValue.ContainsKey("privatekey") ? argsValue["privatekey"] : null;
+                var publicKey = string.IsNullOrWhiteSpace(publicKeyPath) ? null : EncryptionPairKey.FromPEMFile(publicKeyPath);
+                var privateKey = string.IsNullOrWhiteSpace(privateKeyPath) ? null : EncryptionPairKey.FromPEMFile(privateKeyPath, true);
 
                 hashalg = string.IsNullOrWhiteSpace(hashalg) ? "SHA256" : hashalg.ToUpper();
 
                 Console.WriteLine($"[*] Starting {exeName}...");
                 if (encrypt)
                 {
-                    Encrypt(argsValue["target"], sign, key, verbose, output);
+                    EncryptOption(argsValue["target"], sign, publicKey, verbose, output, privateKey);
                     return;
                 }
-                if (sign && !encrypt)
+                if (sign)
                 {
-                    Sign(argsValue["target"], key, output, verbose);
+                    Sign(argsValue["target"], privateKey, output, verbose);
                     return;
                 }
                 if (verifySignature)
                 {
-                    VerifySignature(argsValue["target"], argsValue["signaturefile"], key, verbose);
+                    VerifySignature(argsValue["target"], argsValue["signaturefile"], publicKey, verbose);
                     return;
                 }
                 if (decrypt)
                 {
-                    Decrypt(argsValue["target"], key, output, verbose);
+                    DecryptOption(argsValue["target"], privateKey, output, verbose);
+                    return;
+                }
+                if (merge)
+                {
+                    MergeSignatureAndData(argsValue["signaturefile"], argsValue["target"], output, publicKey, verbose);
+                    return;
+                }
+                if (unmerge)
+                {
+                    UnmergeSignatureAndData(argsValue["target"], output, privateKey, verbose);
                     return;
                 }
                 if (newKey != -1)
@@ -173,54 +279,102 @@ namespace RSAEncryption
             Console.WriteLine($"[*] as pub.{filename}.pem and pub.{filename}.pem");
         }
 
-        public static void Sign(string target, EncryptionPairKey key, string output, bool verbose)
+        public static void Sign(string target, EncryptionPairKey privateKey, string output, bool verbose)
         {
             if (string.IsNullOrWhiteSpace(output))
                 output = Environment.CurrentDirectory;
 
-            if (key == null)
+            if (privateKey == null)
                 throw new ArgumentNullException(
-                    message: "In order to decrypt data, private key must not be null.",
-                    paramName: nameof(key));
+                    message: "In order to sign data, private key must not be null.",
+                    paramName: nameof(privateKey));
 
-            Console.WriteLine("[*] Warning: Target file must be the encrypted and not the original to sign correctly");
+            if (!File.Exists(target))
+                throw new ArgumentException(
+                    message: "When signing target must be an existent file.",
+                    paramName: nameof(target));
 
-            if (File.Exists(target))
+            if (privateKey.PublicOnly)
+                throw new InvalidOperationException(
+                    message: "Impossible to sign data using a public key.");
+
+            string fileName = Path.GetFileNameWithoutExtension(target);
+            fileName = fileName.Replace(".encrypted", "");
+            string fileExt = Path.GetExtension(target);
+
+            if (verbose)
+                Console.WriteLine("[*] Storing file in memory...");
+
+            FileManipulation.OpenFile(target, out var file);
+
+            if (verbose)
             {
-                string fileName = Path.GetFileNameWithoutExtension(target);
-                fileName = fileName.Replace(".encrypted", "");
-                string fileExt = Path.GetExtension(target);
-
-                if (verbose)
-                    Console.WriteLine("[*] Storing file in memory...");
-
-                FileManipulation.OpenFile(target, out var file);
-
-                if (verbose)
-                {
-                    Console.WriteLine("[*] File in memory...");
-                    Console.WriteLine("[*] Signing file...");
-                    Stopwatch.Restart();
-                }
-                var signedData = RSAMethods.SignData(file, key, hashalg);
-
-                if (verbose)
-                {
-                    Stopwatch.Stop();
-                    Console.WriteLine($"[*] Elapsed time for signing {Stopwatch.ElapsedMilliseconds} ms");
-                    Console.WriteLine("[*] Saving file...");
-                }
-
-                FileManipulation.SaveFile(signedData, output, $"{fileName}.signature{fileExt}", true);
-                Console.WriteLine($"[*] File saved as \"{fileName}.signature{fileExt}\" at {output}");
+                Console.WriteLine("[*] File in memory...");
+                Console.WriteLine("[*] Signing file...");
+                Stopwatch.Restart();
             }
-            else
+            var signedData = privateKey.SignData(file, hashalg);
+
+            if (verbose)
             {
-                throw new ArgumentException(message: "Target path is non-existent.");
+                Stopwatch.Stop();
+                Console.WriteLine($"[*] Elapsed time for signing {Stopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine("[*] Saving file...");
             }
+
+            FileManipulation.SaveFile(signedData, output, $"{fileName}.signature{fileExt}", true);
+            Console.WriteLine($"[*] File saved as \"{fileName}.signature{fileExt}\" at {output}");
         }
 
-        public static void Decrypt(string target, EncryptionPairKey key, string output, bool verbose)
+        public static void VerifySignature(string dataPath, string signaturePath, EncryptionPairKey publicKey, bool verbose)
+        {
+            if (string.IsNullOrWhiteSpace(dataPath))
+                throw new ArgumentNullException(
+                    message: "Data path cannot be null.",
+                    paramName: nameof(dataPath));
+
+            if (string.IsNullOrWhiteSpace(signaturePath))
+                throw new ArgumentNullException(
+                    message: "Signed data path cannot be null.",
+                    paramName: nameof(signaturePath));
+
+            if (publicKey == null)
+                throw new NullReferenceException(
+                    message: "In order to verify signature, public key must not be null.");
+
+            if (!File.Exists(dataPath) || !File.Exists(signaturePath))
+                throw new ArgumentException(message: "Both files must exists.");
+
+            if (verbose)
+                Console.WriteLine("[*] Storing original data in memory...");
+            FileManipulation.OpenFile(dataPath, out var originalData);
+            if (verbose)
+            {
+                Console.WriteLine("[*] Original data stored...");
+                Console.WriteLine("[*] Storing signed data in memory...");
+            }
+            FileManipulation.OpenFile(signaturePath, out var signedData);
+            if (verbose)
+                Console.WriteLine("[*] Signed data stored...");
+
+            string fileName = Path.GetFileName(signaturePath);
+
+            if (verbose)
+                Stopwatch.Restart();
+            bool validSignature = publicKey.VerifySignedData(originalData, signedData, hashalg);
+            if (verbose)
+            {
+                Stopwatch.Stop();
+                Console.WriteLine($"[*] Elapsed time for verifying signature {Stopwatch.ElapsedMilliseconds} ms");
+            }
+
+            if (validSignature)
+                Console.WriteLine($"[*] The file \"{fileName}\" contains a valid {hashalg} signature.");
+            else
+                Console.WriteLine($"[*] The file \"{fileName}\" do not contains a valid {hashalg} signature.");
+        }
+
+        public static void DecryptOption(string target, EncryptionPairKey key, string output, bool verbose)
         {
             if (string.IsNullOrWhiteSpace(output))
                 output = Environment.CurrentDirectory;
@@ -241,67 +395,16 @@ namespace RSAEncryption
 
             if (File.Exists(target))
             {
-                string fileName = Path.GetFileNameWithoutExtension(target);
-                fileName = fileName.Replace(".encrypted", "");
-                string fileExt = Path.GetExtension(target);
-
-                if (verbose)
-                {
-                    Console.WriteLine("[*] Decrypting 1 out of 1 file(s).");
-                    Console.WriteLine("[*] Storing file in memory...");
-                }
-
-                FileManipulation.OpenFile(target, out var file);
-                if (verbose)
-                {
-                    Console.WriteLine("[*] File in memory...");
-                    Console.WriteLine("[*] Starting decryption...");
-                    Stopwatch.Restart();
-                }
-                var decrypted = RSAMethods.DecryptFile(file, key);
-                if (verbose)
-                {
-                    Stopwatch.Stop();
-                    Console.WriteLine($"[*] Elapsed time for decryption {Stopwatch.ElapsedMilliseconds} ms");
-                    Console.WriteLine("[*] Saving file...");
-                }
-
-                FileManipulation.SaveFile(decrypted, output, $"{fileName}.decrypted{fileExt}", true);
-                Console.WriteLine($"[*] File saved as \"{fileName}.decrypted{fileExt}\" at {output}");
+                Console.WriteLine("[*] Decrypting 1 out of 1 file(s).");
+                Decrypt(target, key, output, verbose);
             }
             else if (Directory.Exists(target))
             {
                 var pathFiles = Directory.GetFiles(target, "*encryp*");
                 for (int i = 0; i < pathFiles.Length; i++)
                 {
-                    string fileName = Path.GetFileNameWithoutExtension(pathFiles[i]);
-
-                    fileName = fileName.Replace(".encrypted", "");
-                    string fileExt = Path.GetExtension(pathFiles[i]);
-
-                    if (verbose)
-                    {
-                        Console.WriteLine($"[*] Decrypting {i + 1} out of {pathFiles.Length} file(s).");
-                        Console.WriteLine("[*] Storing file in memory...");
-                    }
-
-                    FileManipulation.OpenFile(pathFiles[i], out var file);
-                    if (verbose)
-                    {
-                        Console.WriteLine("[*] File in memory...");
-                        Console.WriteLine("[*] Starting decryption...");
-                        Stopwatch.Restart();
-                    }
-                    var decrypted = RSAMethods.DecryptFile(file, key);
-                    if (verbose)
-                    {
-                        Stopwatch.Stop();
-                        Console.WriteLine($"[*] Elapsed time for decryption {Stopwatch.ElapsedMilliseconds} ms");
-                        Console.WriteLine("[*] Saving file...");
-                    }
-
-                    FileManipulation.SaveFile(decrypted, output, $"{fileName}.decrypted{fileExt}", true);
-                    Console.WriteLine($"[*] File saved as \"{fileName}.decrypted{fileExt}\" at {output}");
+                    Console.WriteLine($"[*] Decrypting {i + 1} out of {pathFiles.Length} file(s).");
+                    Decrypt(pathFiles[i], key, output, verbose);
                 }
             }
             else
@@ -310,148 +413,148 @@ namespace RSAEncryption
             }
         }
 
-        public static void VerifySignature(string originalDataPath, string signedDataPath, EncryptionPairKey key, bool verbose)
-        {
-            if (string.IsNullOrWhiteSpace(originalDataPath))
-                throw new ArgumentNullException(
-                    message: "Original data path cannot be null.",
-                    paramName: nameof(originalDataPath));
-
-            if (string.IsNullOrWhiteSpace(signedDataPath))
-                throw new ArgumentNullException(
-                    message: "Signed data path cannot be null.",
-                    paramName: nameof(signedDataPath));
-
-            if (key == null)
-                throw new ArgumentNullException(
-                    message: "In order to verify signature, public key must not be null.",
-                    paramName: nameof(key));
-
-            if (!File.Exists(originalDataPath) && !File.Exists(signedDataPath))
-                throw new ArgumentException(message: "Both files must exists.");
-
-            if (verbose)
-                Console.WriteLine("[*] Storing original data in memory...");
-            FileManipulation.OpenFile(originalDataPath, out var originalData);
-            if (verbose)
-            {
-                Console.WriteLine("[*] Original data stored...");
-                Console.WriteLine("[*] Storing signed data in memory...");
-            }
-            FileManipulation.OpenFile(signedDataPath, out var signedData);
-            if (verbose)
-                Console.WriteLine("[*] Signed data stored...");
-
-            string fileName = Path.GetFileName(signedDataPath);
-
-            if (verbose)
-                Stopwatch.Restart();
-            bool validSignature = RSAMethods.VerifySignedData(originalData, signedData, key, hashalg);
-            if (verbose)
-            {
-                Stopwatch.Stop();
-                Console.WriteLine($"[*] Elapsed time for verifying signature {Stopwatch.ElapsedMilliseconds} ms");
-            }
-
-            if (validSignature)
-                Console.WriteLine($"[*] The file \"{fileName}\" contains a valid {hashalg} signature.");
-            else
-                Console.WriteLine($"[*] The file \"{fileName}\" do not contains a valid {hashalg} signature.");
-        }
-
-        public static void Encrypt(string target, bool sign, EncryptionPairKey key, bool verbose, string output)
+        public static void EncryptOption(string target, bool sign, EncryptionPairKey keyToEncrypt, bool verbose, string output, EncryptionPairKey keyToSign = null)
         {
             if (string.IsNullOrWhiteSpace(target))
                 throw new ArgumentNullException(
                     message: "Target cannot be null.",
                     paramName: nameof(target));
 
-            if (sign && key?.PublicOnly == true)
-                throw new InvalidOperationException(
-                    message: "Signing flag is enabled, must use private key.");
-
-            if (key == null)
+            if (keyToEncrypt == null)
                 throw new ArgumentNullException(
                     message: "In order to encrypt data, public key must not be null.",
-                    paramName: nameof(key));
+                    paramName: nameof(keyToEncrypt));
+
+            if (sign && (keyToSign?.PublicOnly == true || keyToSign == null))
+                throw new InvalidOperationException(
+                    message: "Signing flag is enabled, must have private key.");
 
             if (File.Exists(target))
             {
-                if (verbose)
-                    Console.WriteLine($"[*] Encrypting 1 out of 1 file(s).");
-
-                string fileName = Path.GetFileNameWithoutExtension(target);
-                string fileExt = Path.GetExtension(target);
-
-                if (verbose)
-                    Console.WriteLine("[*] Storing file in memory...");
-                FileManipulation.OpenFile(target, out var file);
-                if (verbose)
-                {
-                    Console.WriteLine("[*] File in memory...");
-                    Console.WriteLine("[*] Starting encryption...");
-                    Stopwatch.Restart();
-                }
-                var encrypted = RSAMethods.EncryptFile(file, key);
-                if (verbose)
-                {
-                    Stopwatch.Stop();
-                    Console.WriteLine($"[*] Elapsed time for encryption {Stopwatch.ElapsedMilliseconds} ms");
-                }
-
-                if (verbose)
-                    Console.WriteLine("[*] Saving file...");
-
-                FileManipulation.SaveFile(encrypted, output, $"{fileName}.encrypted{fileExt}", true);
-                Console.WriteLine($"[*] File saved as \"{fileName}.encrypted{fileExt}\" at {output}");
-
-                if (sign)
-                {
-                    Sign($@"{output}\{fileName}.encrypted{fileExt}", key, output, verbose);
-                }
+                Console.WriteLine($"[*] Encrypting 1 out of 1 file(s).");
+                Encrypt(target, sign, keyToEncrypt, verbose, output, keyToSign);
             }
             else if (Directory.Exists(target))
             {
                 var pathFiles = Directory.GetFiles(target);
                 for (int i = 0; i < pathFiles.Length; i++)
                 {
-                    if (verbose)
-                        Console.WriteLine($"[*] Encrypting {i + 1} out of {pathFiles.Length} file(s).");
+                    Console.WriteLine($"[*] Encrypting {i + 1} out of {pathFiles.Length} file(s).");
 
-                    string fileName = Path.GetFileNameWithoutExtension(pathFiles[i]);
-                    string fileExt = Path.GetExtension(pathFiles[i]);
-
-                    if (verbose)
-                        Console.WriteLine("[*] Storing file in memory...");
-                    FileManipulation.OpenFile(pathFiles[i], out var file);
-                    if (verbose)
-                    {
-                        Console.WriteLine("[*] File in memory...");
-                        Console.WriteLine("[*] Starting encryption...");
-                        Stopwatch.Restart();
-                    }
-                    var encrypted = RSAMethods.EncryptFile(file, key);
-                    if (verbose)
-                    {
-                        Stopwatch.Stop();
-                        Console.WriteLine($"[*] Elapsed time for encryption {Stopwatch.ElapsedMilliseconds} ms");
-                    }
-
-                    if (verbose)
-                        Console.WriteLine("[*] Saving file...");
-                    FileManipulation.SaveFile(encrypted, output, $"{fileName}.encrypted{fileExt}", true);
-                    Console.WriteLine($"[*] File saved as \"{fileName}.encrypted{fileExt}\" at {output}");
-
-                    if (sign)
-                    {
-                        Sign($@"{output}\{fileName}.encrypted{fileExt}", key, output, verbose);
-                    }
+                    Encrypt(pathFiles[i], sign, keyToEncrypt, verbose, output, keyToSign);
                 }
             }
             else
             {
                 throw new ArgumentException(message: "Target path is non-existent.");
             }
+        }
+
+        public static string MergeSignatureAndData(string targetPath, string signaturePath, string output, EncryptionPairKey publicKey, bool verbose = false)
+        {
+            if (!File.Exists(targetPath))
+                throw new ArgumentException(
+                    message: "Target file must exists.",
+                    paramName: nameof(targetPath));
+            if (!File.Exists(signaturePath))
+                throw new ArgumentException(
+                    message: "Signature path must exists.",
+                    paramName: nameof(signaturePath));
+            if (!Directory.Exists(output))
+                throw new ArgumentException(
+                    message: "Output must exists.",
+                    paramName: nameof(output));
+            if (publicKey == null)
+                throw new NullReferenceException(
+                    message: "Key must not be null.");
+
+            if (verbose)
+            {
+                Console.WriteLine("[*] Storing data in memory...");
+                Console.WriteLine("[*] Storing signature in memory...");
+                Stopwatch.Restart();
+            }
+
+            string filename = Path.GetFileNameWithoutExtension(targetPath);
+
+            FileManipulation.OpenFile(targetPath, out var data);
+            FileManipulation.OpenFile(signaturePath, out var signature);
+            if (verbose)
+            {
+                Stopwatch.Stop();
+                Console.WriteLine($"[*] Elapsed time to store files {Stopwatch.ElapsedMilliseconds} ms");
+            }
+
+            byte[] mergedFile = new byte[signature.Length + data.Length];
+            using (var ms = new MemoryStream(mergedFile))
+            {
+                ms.Write(signature, 0, signature.Length);
+                ms.Write(data, 0, data.Length);
+            }
+
+            if (!publicKey.VerifySignedData(data, signature, hashalg))
+                throw new InvalidDataException(
+                    message: "Signature is invalid for this key.");
+
+            Console.WriteLine($"[*] Merged file saved at: {output}\\{filename}.merged");
+            FileManipulation.SaveFile(mergedFile, output, filename + ".merged",true);
+            return $"{output}\\{filename}.merged";
+        }
+
+        public static void UnmergeSignatureAndData(string targetPath, string output, EncryptionPairKey privateKey, bool verbose = false)
+        {
+            if (!File.Exists(targetPath))
+                throw new ArgumentException(
+                    message: "Target file must exists.",
+                    paramName: nameof(targetPath));
+            if (!Directory.Exists(output))
+                throw new ArgumentException(
+                    message: "Output must exists.",
+                    paramName: nameof(output));
+            if (privateKey == null)
+                throw new NullReferenceException(
+                    message: "Key must not be null.");
+            if (privateKey?.PublicOnly == true)
+                throw new ArgumentException(
+                    message: "A private key is required.",
+                    paramName: nameof(privateKey));
+
+            var rnd = new Random();
+            byte[] b = new byte[4];
+            rnd.NextBytes(b);
+            int signatureSize = privateKey.SignData(b, hashalg).Length;
+
+            if (verbose)
+            {
+                Console.WriteLine("[*] Storing file into memory...");
+                Console.WriteLine("[*] Spliting signature and data...");
+                Stopwatch.Restart();
+            }
+
+            FileManipulation.OpenFile(targetPath, out var file);
+
+            byte[] signature = new byte[signatureSize];
+            byte[] data = new byte[file.Length - signatureSize];
+
+            using (var ms = new MemoryStream(file))
+            {
+                ms.Read(signature, 0, signatureSize);
+                ms.Read(data, 0, data.Length);
+            }
+
+            if (verbose)
+            {
+                Stopwatch.Stop();
+                Console.WriteLine($"[*] Elapsed time {Stopwatch.ElapsedMilliseconds} ms");
+            }
+
+            string fileName = Path.GetFileNameWithoutExtension(targetPath);
+            string fileExt = Path.GetExtension(targetPath);
+
+            Console.WriteLine($"[*] Saving signature as: {output}\\{fileName}.signature");
+            Console.WriteLine($"[*] Saving data as: {output}\\{fileName}.data{fileExt}");
+            FileManipulation.SaveFile(signature, output, $"{fileName}.signature{fileExt}");
+            FileManipulation.SaveFile(data, output, $"{fileName}.data{fileExt}");
         }
 
         public static void ShowHelp(OptionSet opts)
@@ -472,11 +575,11 @@ namespace RSAEncryption
             ShowHelp(opts);
             Console.Write("\n\n");
             Console.WriteLine("Examples:\n");
-            Console.WriteLine($" Encrypting and signing: {exeName} -e -s --target=.\\myfile.pdf --publickey=.\\pubkey.pem\n\tEncrypts and sign the specified file using default output with specified public key");
-            Console.WriteLine($" Decrypting: {exeName} -d --target=.\\myfile.encrypted.pdf --output=.\\ --privatekey=.\\privkey.pem --verbose\n\tDecrypts specified file on specified output using selected key with increase verbosity");
+            Console.WriteLine($" Encrypting and signing: {exeName} -e -s --target=.\\myfile.pdf --publickey=.\\pub.key.pem --privatekey=\\priv.key.pem\n\tEncrypts using public key and sign the specified file using default output with specified private key");
+            Console.WriteLine($" Decrypting: {exeName} -d --target=.\\myfile.encrypted.pdf --output=.\\ --privatekey=.\\priv.key.pem --verbose\n\tDecrypts specified file on specified output using selected key with increase verbosity");
             Console.WriteLine($" Generating new key: {exeName} --newkey=4096 -o=.\\\n\tGenerates a new key with chosen size at selected path");
-            Console.WriteLine($" Signing only: {exeName} --sign --target=.\\myfile.encrypted.docx --privatekey=.\\privkey.pem\n\tSigns the specified file using default output with specified private key");
-            Console.WriteLine($" Verifying signature: {exeName} -vs --target=.\\myfile.encrypted.txt --signaturefile=.\\myfile.signature.txt --publickey=.\\pubkey.pem\n\tChecks if signature file is valid");
+            Console.WriteLine($" Signing only: {exeName} --sign --target=.\\myfile.docx --privatekey=.\\priv.key.pem\n\tSigns the specified file using default output with specified private key");
+            Console.WriteLine($" Verifying signature: {exeName} -vs --target=.\\myfile.txt --signaturefile=.\\myfile.signature.txt --publickey=.\\pub.key.pem\n\tChecks if signature file is valid");
         }
     }
 }
