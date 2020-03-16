@@ -11,7 +11,7 @@
 ##### Note: If no output is specified, the default output path is Environment.CurrentDirectory.
 ##### Note: Recommendation is that files are no larger than 10mb, cause it'll take longer.
 ##### Note: When using decrypt on a directory it searches for files that contains ```.encrypted``` on it's name.
-##### Note: Key size must be between 384 and 16384 bits in sizes incremented by 8, e.g.: 384, 392, 400 etc.
+##### Note: Key size must be between 512 and 16384 bits in sizes incremented by 8, e.g.: 512, 520, 528 etc.
 
 ### Options:
 ```
@@ -71,9 +71,9 @@
 ```
 ```
   --keysize=VALUE             when generating key use this to choose its size,
-                                  minimum size is 384 and maximum is 16384, 
+                                  minimum size is 512 and maximum is 16384, 
                                   key size must be in increments of 8 bits 
-                                  starting at 384.
+                                  starting at 512.
 ```
   --keyfilename=VALUE         when generating a new key use this to choose file
                                   name, default is "key"
@@ -111,6 +111,11 @@
  ```
   rsaencryption --newkey -o=.\
         Generates a new key with default name and size at selected path
+```
+* Generating new key with chosen size and name:
+```
+  rsaencryption -n --keysize=1024 --keyfilename=my_1024_key -o=.\
+        Generates a new key with specified name and size at selected path
 ```
 * Signing only:
 ```
