@@ -514,7 +514,7 @@ namespace RSAEncryption
 
             Console.WriteLine($"[*] Merged file saved at: {output}\\{fileName}.merged{fileExt}");
             FileManipulation.SaveFile(mergedFile, output, fileName + $".merged{fileExt}",true);
-            return $"{output}\\{fileName}.merged";
+            return $"{output}\\{fileName}.merged{fileExt}";
         }
 
         public static void UnmergeSignatureAndData(string targetPath, string output, EncryptionPairKey publicSignatureKey, string hashalg, bool verbose = false)
