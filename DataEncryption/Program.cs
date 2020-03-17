@@ -490,7 +490,8 @@ namespace RSAEncryption
                 Stopwatch.Restart();
             }
 
-            string filename = Path.GetFileNameWithoutExtension(targetPath);
+            string fileName = Path.GetFileNameWithoutExtension(targetPath);
+            string fileExt = Path.GetExtension(targetPath);
 
             FileManipulation.OpenFile(targetPath, out var data);
             FileManipulation.OpenFile(signaturePath, out var signature);
@@ -511,9 +512,9 @@ namespace RSAEncryption
                 throw new InvalidDataException(
                     message: "Signature is invalid for this key.");
 
-            Console.WriteLine($"[*] Merged file saved at: {output}\\{filename}.merged");
-            FileManipulation.SaveFile(mergedFile, output, filename + ".merged",true);
-            return $"{output}\\{filename}.merged";
+            Console.WriteLine($"[*] Merged file saved at: {output}\\{fileName}.merged{fileExt}");
+            FileManipulation.SaveFile(mergedFile, output, fileName + $".merged{fileExt}",true);
+            return $"{output}\\{fileName}.merged";
         }
 
         public static void UnmergeSignatureAndData(string targetPath, string output, EncryptionPairKey publicSignatureKey, string hashalg, bool verbose = false)
