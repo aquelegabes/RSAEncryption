@@ -11,7 +11,7 @@
 ##### Note: If no output is specified, the default output path is [Environment.CurrentDirectory](https://docs.microsoft.com/en-us/dotnet/api/system.environment.currentdirectory?view=netcore-3.1).
 ##### Note: Recommendation is that files are no larger than 10mb, cause it'll take longer.
 ##### Note: When using decrypt *on a directory it searches for files that contains ```.encrypted``` on it's name.*
-##### Note: Key size **MUST** be between 512 and 16384 bits in sizes incremented by 8, e.g.: 512, 520, 528 etc.
+##### Note: Key size **MUST** be between 384 and 16384 bits in sizes incremented by 8, e.g.: 512, 520, 528 etc.
 
 ### Options:
 ```
@@ -70,9 +70,8 @@
 ```
 ```
   --keysize=VALUE             when generating key use this to choose its size,
-                                  minimum size is 512 and maximum is 16384, 
-                                  key size must be in increments of 8 bits 
-                                  starting at 512.
+                                  minimum size is 384 and maximum is 16384, 
+                                  key size must be in increments of 8 bits.
 ```
 ```
   --keyfilename=VALUE         when generating a new key use this to choose file
