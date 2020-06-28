@@ -6,20 +6,20 @@
 </p>
 
 ## Usage: rsaencryption [OPTIONS]
-##### Encrypts, decrypts, sign and verifies signature on files. Encrypt files using Rijndael encryption algorithm with RSA keys.
-##### Note: When encrypting or decrypting ```--target``` can be used to specify a directory.
-##### Note: If no output is specified, the default output path is Environment.CurrentDirectory.
+##### Encrypts, decrypts, sign or verifies signature on files. Encrypt files using [Rijndael](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) encryption algorithm using [RSA keys](https://en.wikipedia.org/wiki/RSA_(cryptosystem)).
+##### Note: When encrypting or decrypting ```--target``` can be used to specify a directory instead of a single file.
+##### Note: If no output is specified, the default output path is [Environment.CurrentDirectory](https://docs.microsoft.com/en-us/dotnet/api/system.environment.currentdirectory?view=netcore-3.1).
 ##### Note: Recommendation is that files are no larger than 10mb, cause it'll take longer.
-##### Note: When using decrypt on a directory it searches for files that contains ```.encrypted``` on it's name.
-##### Note: Key size must be between 512 and 16384 bits in sizes incremented by 8, e.g.: 512, 520, 528 etc.
+##### Note: When using decrypt *on a directory it searches for files that contains ```.encrypted``` on it's name.*
+##### Note: Key size **MUST** be between 512 and 16384 bits in sizes incremented by 8, e.g.: 512, 520, 528 etc.
 
 ### Options:
 ```
-  -d, --decrypt               decrypts the encrypted data, requires private key 
+  -d, --decrypt               decrypts encrypted data, requires private key 
                                   [ACTION]
 ```
 ```
-  -e, --encrypt               encrypts the data, requires public key 
+  -e, --encrypt               encrypts data, requires public key 
                                   [ACTION]
 ```
 ```
@@ -37,10 +37,10 @@
                                   [ACTION]
 ```
 ```
-  -o, --output=VALUE          path to output encrypted files
+  -o, --output=VALUE          path to output files
 ```
 ```
-  -s, --sign                  signs the encrypted data, requires private key 
+  -s, --sign                  signs data, requires private key 
                                   [ACTION]
 ```
 ```
@@ -98,14 +98,14 @@
 * Encrypting and signing:
 ```
   rsaencryption -e -s --target=.\\myfile.pdf --publickey=.\\pub.key.pem --privatekey=\\priv.key.pem
-        Sign data (using private key) then encrypts (using public key) merged 
+        Sign data (using private key) then encrypts (using public key) merging 
             signature and data using default output
 ```
 * Decrypting:
 ```
   rsaencryption -d --target=.\\myfile.encrypted.pdf --output=.\\ --privatekey=.\\priv.key.pem --verbose
         Decrypts specified file on specified output using selected key 
-            with increase verbosity
+            with increased verbosity
 ```
 * Generating new key:
  ```
