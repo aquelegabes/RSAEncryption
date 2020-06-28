@@ -155,7 +155,7 @@ namespace RSAEncryption
                     v => hashalg = v },
                 { "keyfilename=", "when generating a new key use this to choose file name, default is \"key\"",
                     v => argsValue.Add("keyfilename",v) },
-                { "keysize=", "when generating key use this to choose its size, minimum size is 512 and maximum is 16384, key size must be in increments of 8 bits starting at 384.",
+                { "keysize=", "when generating key use this to choose its size, minimum size is 384 and maximum is 16384, key size must be in increments of 8 bits.",
                     (int v) => keySize = v },
                 { "publickey=", "key used to encrypt and verify signature (.pem file)",
                     v => argsValue.Add("publickey",v) },
