@@ -13,15 +13,24 @@ namespace RSAEncryption.Tests.Main
         [Fact]
         public void Main_Signing_Verbosity_OK()
         {
+            const string hashalg = "SHA256";
             Setup.Initialize(out var testFolders);
             Setup.SetEncryptedFiles(testFolders);
 
-            string targetFile = Directory.GetFiles(testFolders["encrypted"], "*encryp*").First();
-            string outputFile = targetFile.Replace(".encrypted", ".signature");
+            var key = EncryptionPairKey.FromPEMFile($"{Setup.AbsolutePath}\\priv.key.pem", true);
+            var signatureLength = key.SignData(new byte[] { 114 }, hashalg).Length;
+
+            string targetFile = Directory.GetFiles(testFolders["original"])[0];
+            // default hashing algorithm is SHA256.
+            string outputFile =
+                Path.Combine(
+                    testFolders["encrypted"],
+                    Path.GetFileNameWithoutExtension(targetFile) + $".{hashalg}.txt"
+                );
 
             string[] args =
             {
-                "-s", "--verbose",
+                "-s", "--verbose", $"--hashalg={hashalg}",
                 $@"--privatekey={Setup.AbsolutePath}\priv.key.pem",
                 $"--output={testFolders["encrypted"]}",
                 $"--target={targetFile}",
@@ -32,7 +41,7 @@ namespace RSAEncryption.Tests.Main
             Assert.True(File.Exists(outputFile));
 
             var outputFileInfo = new FileInfo(outputFile);
-            Assert.True(outputFileInfo.Length == 256);
+            Assert.True(outputFileInfo.Length == signatureLength);
         }
 
         [Fact]
@@ -41,7 +50,7 @@ namespace RSAEncryption.Tests.Main
             Setup.Initialize(out var testFolders);
             Setup.SetEncryptedFiles(testFolders);
 
-            string targetFile = Directory.GetFiles(testFolders["encrypted"], "*encryp*").First();
+            string targetFile = Directory.GetFiles(testFolders["encrypted"], "*encryp*")[0];
 
             Assert.Throws<ArgumentNullException>(() =>
                 Program.Sign(targetFile, null, testFolders["encrypted"], false));
@@ -65,7 +74,7 @@ namespace RSAEncryption.Tests.Main
             Setup.Initialize(out var testFolders);
             Setup.SetEncryptedFiles(testFolders);
 
-            string targetFile = Directory.GetFiles(testFolders["encrypted"], "*encryp*").First();
+            string targetFile = Directory.GetFiles(testFolders["encrypted"], "*encryp*")[0];
             var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\pub.key.pem", false);
 
             Assert.Throws<InvalidOperationException>(() =>

@@ -11,10 +11,10 @@ namespace RSAEncryption.Extensions
     public static class RSACryptoServiceProviderExtensions
     {
         /// <summary>
-        /// Import OpenSSH PEM private/public key string into MS RSACryptoServiceProvider
+        /// Import OpenSSH PEM private/public key string into MS <see cref="RSACryptoServiceProvider" />
         /// </summary>
-        /// <param name="csp"></param>
-        /// <param name="pem"></param>
+        /// <param name="pem">Encoded byte string from PEM file</param>
+        /// <param name="includePrivate">true includes private key, otherwise false</param>
         /// <returns></returns>
         public static EncryptionPairKey ImportKey(this RSACryptoServiceProvider csp, string pem, bool includePrivate = false)
         {
