@@ -24,6 +24,9 @@ MIT License</Description>
     - Generate a new RSA key</PackageReleaseNotes>
     <PackageTags>encryption privacy</PackageTags>
     <SignAssembly>true</SignAssembly>
+    <Version>1.0.1</Version>
+    <AssemblyOriginatorKeyFile>rsaencryption_keyFile.pfx</AssemblyOriginatorKeyFile>
+    <DelaySign>false</DelaySign>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
