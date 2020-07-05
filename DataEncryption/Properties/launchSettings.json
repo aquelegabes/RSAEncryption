@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "RSAEncryption": {
-      "commandName": "Project",
-      "commandLineArgs": "-v --hashalg=SHA256 --target=\\Users\\gabri\\Documents\\Encryption\\debugging\\t.mp4 --signaturefile=\\Users\\gabri\\Documents\\Encryption\\debugging\\t.signature.mp4 --publickey=\\Users\\gabri\\Documents\\Encryption\\debugging\\pub.2048.pem"
-      //"commandLineArgs": "-s --target=\\Users\\gabri\\Documents\\Encryption\\debugging\\t.mp4 --privatekey=\\Users\\gabri\\Documents\\Encryption\\debugging\\priv.key.pem -o=\\Users\\gabri\\Documents\\Encryption\\debugging"
-    }
-  }
-}

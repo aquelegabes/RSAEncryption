@@ -23,7 +23,7 @@ MIT License</Description>
     - Checks for a valid signature
     - Generate a new RSA key</PackageReleaseNotes>
     <PackageTags>encryption privacy</PackageTags>
-    <SignAssembly>false</SignAssembly>
+    <SignAssembly>true</SignAssembly>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

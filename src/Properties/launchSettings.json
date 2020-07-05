@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "RSAEncryption": {
+      "commandName": "Project",
+      "commandLineArgs": "-v --hashalg=SHA256 --target=.\\t.mp4 --signaturefile=.\\t.signature.mp4 --publickey=.\\pub.2048.pem"
+    }
+  }
+}

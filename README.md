@@ -7,6 +7,7 @@
 
 ## Usage: rsaencryption [OPTIONS]
 ##### Encrypts, decrypts, sign or verifies signature on files. Encrypt files using [Rijndael](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) encryption algorithm using [RSA keys](https://en.wikipedia.org/wiki/RSA_(cryptosystem)).
+##### (Hash algorithm name)[https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.hashalgorithmname?view=netcore-3.1#remarks]
 ##### Note: When encrypting or decrypting ```--target``` can be used to specify a directory instead of a single file.
 ##### Note: If no output is specified, the default output path is [Environment.CurrentDirectory](https://docs.microsoft.com/en-us/dotnet/api/system.environment.currentdirectory?view=netcore-3.1).
 ##### Note: Recommendation is that files are no larger than 10mb, cause it'll take longer.
@@ -65,7 +66,7 @@
                                   [ACTION]
 ```
 ```
-  --hashalg=VALUE             type of hashing algorithm, examples: SHA1, SHA256.
+  --hashalg=VALUE             type of [hashing algorithm](https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.hashalgorithmname?view=netcore-3.1#remarks), examples: SHA1, SHA256.
                                   default value is SHA256
 ```
 ```
@@ -118,11 +119,11 @@
 ```
 * Signing only:
 ```
-  rsaencryption  --sign --target=.\\myfile.docx --privatekey=.\\priv.key.pem
-        Signs the specified file using default output with specified private key
+  rsaencryption  --sign --target=.\\myfile.docx --privatekey=.\\priv.key.pem --hashalg=SHA384
+        Signs the specified file using default output with specified private key and selected hash algorithm
 ```
 * Verifying signature: 
 ```
-  rsaencryption -vs --target=.\\myfile.txt --signaturefile=.\\myfile.signature.txt --publickey=.\\pub.key.pem
+  rsaencryption -v --target=.\\myfile.txt --signaturefile=.\\myfile.signature.txt --publickey=.\\pub.key.pem
         Checks if signature file is valid
 ```
