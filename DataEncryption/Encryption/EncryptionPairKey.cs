@@ -357,6 +357,7 @@ namespace RSAEncryption.Encryption
                     message: "Public key must not be null.");
 
             var hashAlg = CryptoConfig.MapNameToOID(hashAlgorithmName);
+
             if (hashAlg == null)
                 throw new InvalidCastException(
                     message: "Invalid hash algorithm name.");
@@ -367,10 +368,7 @@ namespace RSAEncryption.Encryption
                 {
                     rsa.ImportParameters(this.RSAParameters);
 
-                    if (!rsa.VerifyData(data, hashAlg, signature))
-                        return false;
-
-                    return true;
+                    return rsa.VerifyData(data, hashAlg, signature);
                 }
                 catch { throw; }
                 finally

@@ -14,7 +14,7 @@ namespace RSAEncryption.Tests.Main
             Setup.Initialize(out var testFolders);
             Setup.SetEncryptedFiles(testFolders);
 
-            string originalFilePath = Directory.GetFiles(testFolders["original"]).First();
+            string originalFilePath = Directory.GetFiles(testFolders["original"])[0];
             string outputFilePath = Path.Combine(
                 path1: testFolders["decrypted"],
                 path2: Path.GetFileNameWithoutExtension(originalFilePath) + ".decrypted.txt");
@@ -104,7 +104,7 @@ namespace RSAEncryption.Tests.Main
             Setup.Initialize(out var testFolders);
             Setup.SetEncryptedFiles(testFolders);
 
-            string targetFilePath = Directory.GetFiles(testFolders["encrypted"]).First();
+            string targetFilePath = Directory.GetFiles(testFolders["encrypted"])[0];
             var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\priv.key.pem", true);
 
             Assert.NotNull(key);
@@ -133,7 +133,7 @@ namespace RSAEncryption.Tests.Main
             Setup.Initialize(out var testFolders);
             Setup.SetEncryptedFiles(testFolders);
 
-            string targetFilePath = Directory.GetFiles(testFolders["encrypted"]).First();
+            string targetFilePath = Directory.GetFiles(testFolders["encrypted"])[0];
 
             Assert.Throws<ArgumentNullException>(()
                 => Program.DecryptOption(targetFilePath, null, testFolders["decrypted"], false));
@@ -145,7 +145,7 @@ namespace RSAEncryption.Tests.Main
             Setup.Initialize(out var testFolders);
             Setup.SetEncryptedFiles(testFolders);
 
-            string targetFilePath = Directory.GetFiles(testFolders["encrypted"]).First();
+            string targetFilePath = Directory.GetFiles(testFolders["encrypted"])[0];
             var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\pub.key.pem", false);
 
             Assert.NotNull(key);

@@ -13,7 +13,7 @@ namespace RSAEncryption.Tests.Main
         {
             Setup.Initialize(out var testFolders);
 
-            string targetFilePath = Directory.GetFiles(testFolders["original"]).First();
+            string targetFilePath = Directory.GetFiles(testFolders["original"])[0];
             string outputFilePath = Path.Combine(
                 path1: testFolders["encrypted"],
                 path2: Path.GetFileNameWithoutExtension(targetFilePath) + ".encrypted.txt");
@@ -44,14 +44,14 @@ namespace RSAEncryption.Tests.Main
             var privKey = EncryptionPairKey.FromPEMFile($"{Setup.AbsolutePath}\\priv.key.pem", true);
             int signatureSize = privKey.SignData(new byte[] { 114 }, hashalg).Length;
 
-            string targetFilePath = Directory.GetFiles(testFolders["original"]).First();
+            string targetFilePath = Directory.GetFiles(testFolders["original"])[0];
             string outputFilePath = Path.Combine(
                 path1: testFolders["encrypted"],
                 path2: Path.GetFileNameWithoutExtension(targetFilePath) + ".encrypted.txt");
 
             string signatureFilePath = Path.Combine(
                 path1: testFolders["encrypted"],
-                path2: Path.GetFileNameWithoutExtension(targetFilePath) + ".signature.txt");
+                path2: Path.GetFileNameWithoutExtension(targetFilePath) + $".{hashalg}.txt");
 
             string[] args =
             {
@@ -108,9 +108,8 @@ namespace RSAEncryption.Tests.Main
         [Fact]
         public void Main_Encrypting_Signing_MultipleFile_Verbosity_OK()
         {
+            const string hashalg = "SHA256";
             Setup.Initialize(out var testFolders);
-
-            string hashalg = "SHA256";
 
             var privKey = EncryptionPairKey.FromPEMFile($"{Setup.AbsolutePath}\\priv.key.pem", true);
             int signatureSize = privKey.SignData(new byte[] { 114 }, hashalg).Length;
@@ -131,7 +130,7 @@ namespace RSAEncryption.Tests.Main
             Array.Sort(originalFiles);
             var generatedEncryptedFiles = Directory.GetFiles(testFolders["encrypted"], "*encryp*");
             Array.Sort(generatedEncryptedFiles);
-            var generatedSignatureFiles = Directory.GetFiles(testFolders["encrypted"], "*sign*");
+            var generatedSignatureFiles = Directory.GetFiles(testFolders["encrypted"], $"*{hashalg}*");
             Array.Sort(generatedSignatureFiles);
 
             Assert.True(originalFiles.Length == generatedEncryptedFiles.Length &&
@@ -180,7 +179,7 @@ namespace RSAEncryption.Tests.Main
         {
             Setup.Initialize(out var testFolders);
 
-            string targetFilePath = Directory.GetFiles(testFolders["original"]).First();
+            string targetFilePath = Directory.GetFiles(testFolders["original"])[0];
             var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\pub.key.pem", false);
 
             Assert.NotNull(key);
@@ -207,7 +206,7 @@ namespace RSAEncryption.Tests.Main
         {
             Setup.Initialize(out var testFolders);
 
-            string targetFilePath = Directory.GetFiles(testFolders["original"]).First();
+            string targetFilePath = Directory.GetFiles(testFolders["original"])[0];
 
             Assert.Throws<ArgumentNullException>(()
                 => Program.EncryptOption(targetFilePath, false, null, false, testFolders["encrypted"]));

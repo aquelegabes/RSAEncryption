@@ -10,8 +10,8 @@ namespace RSAEncryption.Tests.Main
     public class GenerateKeyTests
     {
         [Theory]
-        [InlineData("keynumber1", 1024)]
-        [InlineData("keynumber2", 2048)]
+        [InlineData("key_2048", 2048)]
+        [InlineData("key_4096", 4096)]
         public void Main_GenerateKey_CustomName_Verbosity_OK(string keyName, int keySize)
         {
             string privateKeyPath = Path.Combine(Setup.AbsolutePath, $"priv.{keyName}.pem");

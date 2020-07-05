@@ -1,11 +1,9 @@
 ﻿using Mono.Options;
 using RSAEncryption.Encryption;
-using RSAEncryption.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 
 namespace RSAEncryption
@@ -61,7 +59,7 @@ namespace RSAEncryption
                     Console.WriteLine("[*] Merging and encrypting...");
                     Stopwatch.Restart();
                 }
-                var signatureFilePath = Path.Combine(output, Path.GetFileName(target.Replace(fileExt, $".signature{fileExt}")));
+                var signatureFilePath = Path.Combine(output, Path.GetFileName(target.Replace(fileExt, $".{hashalg}{fileExt}")));
 
                 string mergedPath = MergeSignatureAndData(target, signatureFilePath, output, keyToSign, verbose);
                 FileManipulation.OpenFile(mergedPath, out var mergedFile);
@@ -196,11 +194,6 @@ namespace RSAEncryption
                 }
 
                 Console.WriteLine($"[*] Starting {exeName}...");
-                // showing signing issues
-                if (sign)
-                {
-                    Console.WriteLine("[*] Warning: Some hashing algorithms may have issues depending on the key size");
-                }
 
                 var output = argsValue.ContainsKey("output") ? argsValue["output"] : Environment.CurrentDirectory;
                 hashalg = string.IsNullOrWhiteSpace(hashalg) ? "SHA256" : hashalg.ToUpper();
@@ -216,6 +209,7 @@ namespace RSAEncryption
                 }
                 if (sign)
                 {
+                    Console.WriteLine("[*] Warning: Some hashing algorithms may have issues depending on the key size");
                     Sign(argsValue["target"], privateKey, output, verbose);
                     return;
                 }
@@ -241,10 +235,7 @@ namespace RSAEncryption
                 }
                 if (newKey)
                 {
-                    if (argsValue.ContainsKey("keyfilename"))
-                        GenerateKey(keySize, verbose, output, argsValue["keyfilename"]);
-                    else
-                        GenerateKey(keySize, verbose, output);
+                    GenerateKey(keySize, verbose, output, argsValue["keyfilename"] ?? "key");
                     return;
                 }
             }
@@ -274,6 +265,7 @@ namespace RSAEncryption
             {
                 Stopwatch.Stop();
                 Console.WriteLine($"[*] Elapsed time for generating new RSA key {Stopwatch.ElapsedMilliseconds} ms");
+                Stopwatch.Start();
                 Console.WriteLine("[*] Exporting public key...");
             }
             keyNew.ToPEMFile(output, filename, false);
@@ -282,7 +274,12 @@ namespace RSAEncryption
             keyNew.ToPEMFile(output, filename, true);
 
             Console.WriteLine($"[*] Key generated and exported to {output}");
-            Console.WriteLine($"[*] as pub.{filename}.pem and pub.{filename}.pem");
+            Console.WriteLine($"[*] as pub.{filename}.pem and priv.{filename}.pem");
+            if (verbose)
+            {
+                Stopwatch.Stop();
+                Console.WriteLine($"[*] Elapsed time for export {Stopwatch.ElapsedMilliseconds}ms.");
+            }
         }
 
         public static void Sign(string target, EncryptionPairKey privateKey, string output, bool verbose)
@@ -307,7 +304,6 @@ namespace RSAEncryption
                     message: "Impossible to sign data using a public key.");
 
             string fileName = Path.GetFileNameWithoutExtension(target);
-            fileName = fileName.Replace(".encrypted", "");
             string fileExt = Path.GetExtension(target);
 
             if (verbose)
@@ -330,8 +326,8 @@ namespace RSAEncryption
                 Console.WriteLine("[*] Saving file...");
             }
 
-            FileManipulation.SaveFile(signedData, output, $"{fileName}.signature{fileExt}", true);
-            Console.WriteLine($"[*] File saved as \"{fileName}.signature{fileExt}\" at {output}");
+            FileManipulation.SaveFile(signedData, output, $"{fileName}.{hashalg}{fileExt}", true);
+            Console.WriteLine($"[*] File saved as \"{fileName}.{hashalg}{fileExt}\" at {output}");
         }
 
         public static void VerifySignature(string dataPath, string signaturePath, EncryptionPairKey publicKey, bool verbose)
@@ -355,21 +351,27 @@ namespace RSAEncryption
 
             if (verbose)
                 Console.WriteLine("[*] Storing original data in memory...");
+
             FileManipulation.OpenFile(dataPath, out var originalData);
+
             if (verbose)
             {
                 Console.WriteLine("[*] Original data stored...");
                 Console.WriteLine("[*] Storing signed data in memory...");
             }
+
             FileManipulation.OpenFile(signaturePath, out var signedData);
+
             if (verbose)
                 Console.WriteLine("[*] Signed data stored...");
 
-            string fileName = Path.GetFileName(signaturePath);
+            string fileName = Path.GetFileName(dataPath);
 
             if (verbose)
                 Stopwatch.Restart();
+
             bool validSignature = publicKey.VerifySignedData(originalData, signedData, hashalg);
+
             if (verbose)
             {
                 Stopwatch.Stop();
@@ -382,7 +384,7 @@ namespace RSAEncryption
                 Console.WriteLine($"[*] The file \"{fileName}\" do not contains a valid {hashalg} signature.");
         }
 
-        public static void DecryptOption(string target, EncryptionPairKey key, string output, bool verbose)
+        public static void DecryptOption(string target, EncryptionPairKey decryptionKey, string output, bool verbose)
         {
             if (string.IsNullOrWhiteSpace(output) || !Directory.Exists(output))
                 throw new ArgumentException(
@@ -394,19 +396,19 @@ namespace RSAEncryption
                     message: "Target cannot be null.",
                     paramName: nameof(target));
 
-            if (key == null)
+            if (decryptionKey == null)
                 throw new ArgumentNullException(
                     message: "In order to decrypt data, private key must not be null.",
-                    paramName: nameof(key));
+                    paramName: nameof(decryptionKey));
 
-            if (key.PublicOnly)
+            if (decryptionKey.PublicOnly)
                 throw new InvalidOperationException(
                     message: "Impossible to decrypt data using a public key.");
 
             if (File.Exists(target))
             {
                 Console.WriteLine("[*] Decrypting 1 out of 1 file(s).");
-                Decrypt(target, key, output, verbose);
+                Decrypt(target, decryptionKey, output, verbose);
             }
             else if (Directory.Exists(target))
             {
@@ -414,7 +416,7 @@ namespace RSAEncryption
                 for (int i = 0; i < pathFiles.Length; i++)
                 {
                     Console.WriteLine($"[*] Decrypting {i + 1} out of {pathFiles.Length} file(s).");
-                    Decrypt(pathFiles[i], key, output, verbose);
+                    Decrypt(pathFiles[i], decryptionKey, output, verbose);
                 }
             }
             else
@@ -423,7 +425,7 @@ namespace RSAEncryption
             }
         }
 
-        public static void EncryptOption(string target, bool sign, EncryptionPairKey keyToEncrypt, bool verbose, string output, EncryptionPairKey keyToSign = null)
+        public static void EncryptOption(string target, bool sign, EncryptionPairKey ecnryptionKey, bool verbose, string output, EncryptionPairKey keyToSign = null)
         {
             if (string.IsNullOrWhiteSpace(output) || !Directory.Exists(output))
                 throw new ArgumentException(
@@ -435,10 +437,10 @@ namespace RSAEncryption
                     message: "Target cannot be null.",
                     paramName: nameof(target));
 
-            if (keyToEncrypt == null)
+            if (ecnryptionKey == null)
                 throw new ArgumentNullException(
                     message: "In order to encrypt data, public key must not be null.",
-                    paramName: nameof(keyToEncrypt));
+                    paramName: nameof(ecnryptionKey));
 
             if (sign && (keyToSign?.PublicOnly == true || keyToSign == null))
                 throw new InvalidOperationException(
@@ -447,7 +449,7 @@ namespace RSAEncryption
             if (File.Exists(target))
             {
                 Console.WriteLine($"[*] Encrypting 1 out of 1 file(s).");
-                Encrypt(target, sign, keyToEncrypt, verbose, output, keyToSign);
+                Encrypt(target, sign, ecnryptionKey, verbose, output, keyToSign);
             }
             else if (Directory.Exists(target))
             {
@@ -456,7 +458,7 @@ namespace RSAEncryption
                 {
                     Console.WriteLine($"[*] Encrypting {i + 1} out of {pathFiles.Length} file(s).");
 
-                    Encrypt(pathFiles[i], sign, keyToEncrypt, verbose, output, keyToSign);
+                    Encrypt(pathFiles[i], sign, ecnryptionKey, verbose, output, keyToSign);
                 }
             }
             else
@@ -569,11 +571,13 @@ namespace RSAEncryption
 
             string fileName = Path.GetFileNameWithoutExtension(targetPath);
             string fileExt = Path.GetExtension(targetPath);
+            string signatureFileName = $"unmerged.{fileName}.{hashalg}";
+            string dataFileName = $"unmerged.{fileName}{fileExt}";
 
-            Console.WriteLine($"[*] Saving signature as: {output}\\{fileName}.unmerged.signature");
-            Console.WriteLine($"[*] Saving data as: {output}\\{fileName}.unmerged.data{fileExt}");
-            FileManipulation.SaveFile(signature, output, $"{fileName}.unmerged.signature{fileExt}");
-            FileManipulation.SaveFile(data, output, $"{fileName}.unmerged.data{fileExt}");
+            Console.WriteLine($"[*] Saving signature as: {output}\\{signatureFileName}");
+            Console.WriteLine($"[*] Saving data as: {output}\\{dataFileName}");
+            FileManipulation.SaveFile(signature, output, signatureFileName);
+            FileManipulation.SaveFile(data, output, dataFileName);
         }
 
         public static void ShowHelp(OptionSet opts)
