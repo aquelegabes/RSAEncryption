@@ -66,7 +66,7 @@
                                   [ACTION]
 ```
 ```
-  --hashalg=VALUE             type of [hashing algorithm](https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.hashalgorithmname?view=netcore-3.1#remarks), examples: SHA1, SHA256.
+  --hashalg=VALUE             type of hashing algorithm, examples: SHA1, SHA256.
                                   default value is SHA256
 ```
 ```
