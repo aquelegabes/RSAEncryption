@@ -17,8 +17,7 @@ namespace RSAEncryption.Tests.Main
             Setup.Initialize(out var testFolders);
             Setup.SetEncryptedFiles(testFolders);
 
-            var key = EncryptionPairKey.FromPEMFile($"{Setup.AbsolutePath}\\priv.key.pem", true);
-            var signatureLength = key.SignData(new byte[] { 114 }, hashalg).Length;
+            var signatureLength = Setup.PrivateKey.SignData(new byte[] { 114 }, hashalg).Length;
 
             string targetFile = Directory.GetFiles(testFolders["original"])[0];
             // default hashing algorithm is SHA256.
@@ -31,7 +30,7 @@ namespace RSAEncryption.Tests.Main
             string[] args =
             {
                 "-s", "--verbose", $"--hashalg={hashalg}",
-                $@"--privatekey={Setup.AbsolutePath}\priv.key.pem",
+                $@"--key={Setup.AbsolutePath}\priv.key.pem",
                 $"--output={testFolders["encrypted"]}",
                 $"--target={targetFile}",
             };
@@ -62,10 +61,8 @@ namespace RSAEncryption.Tests.Main
             Setup.Initialize(out var testFolders);
             Setup.SetEncryptedFiles(testFolders);
 
-            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\priv.key.pem", true);
-
             Assert.Throws<ArgumentException>(() =>
-                Program.Sign("", key, testFolders["encrypted"], false));
+                Program.Sign("", Setup.PrivateKey, testFolders["encrypted"], false));
         }
 
         [Fact]
@@ -75,10 +72,9 @@ namespace RSAEncryption.Tests.Main
             Setup.SetEncryptedFiles(testFolders);
 
             string targetFile = Directory.GetFiles(testFolders["encrypted"], "*encryp*")[0];
-            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\pub.key.pem", false);
 
             Assert.Throws<InvalidOperationException>(() =>
-                Program.Sign(targetFile, key, testFolders["encrypted"], false));
+                Program.Sign(targetFile, Setup.PublicKey, testFolders["encrypted"], false));
         }
     }
 }

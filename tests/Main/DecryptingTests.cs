@@ -25,7 +25,7 @@ namespace RSAEncryption.Tests.Main
             string[] args =
             {
                 "-d", "--verbose",
-                $@"--privatekey={Setup.AbsolutePath}\priv.key.pem",
+                $@"--key={Setup.AbsolutePath}\priv.key.pem",
                 $"--output={testFolders["decrypted"]}",
                 $"--target={targetFilePath}",
             };
@@ -58,9 +58,9 @@ namespace RSAEncryption.Tests.Main
             string[] args =
             {
                 "-d", "--verbose",
-                $@"--privatekey={Setup.AbsolutePath}\priv.key.pem",
+                $@"--key={Setup.AbsolutePath}\priv.key.pem",
                 $"--output={testFolders["decrypted"]}",
-                @$"--target={testFolders["encrypted"]}",
+                $"--target={testFolders["encrypted"]}",
             };
 
             Program.Main(args);
@@ -90,12 +90,9 @@ namespace RSAEncryption.Tests.Main
             Setup.SetEncryptedFiles(testFolders);
 
             string targetFilePath = $@"{testFolders["original"]}\nonexisting.txt";
-            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\priv.key.pem", true);
-
-            Assert.NotNull(key);
 
             Assert.Throws<ArgumentException>(()
-                => Program.DecryptOption(targetFilePath, key, testFolders["encrypted"], false));
+                => Program.DecryptOption(targetFilePath, Setup.PrivateKey, testFolders["encrypted"], false));
         }
 
         [Fact]
@@ -105,12 +102,9 @@ namespace RSAEncryption.Tests.Main
             Setup.SetEncryptedFiles(testFolders);
 
             string targetFilePath = Directory.GetFiles(testFolders["encrypted"])[0];
-            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\priv.key.pem", true);
-
-            Assert.NotNull(key);
 
             Assert.Throws<ArgumentException>(()
-                => Program.DecryptOption(targetFilePath, key, @$"{Setup.AbsolutePath}\invalidpath",false));
+                => Program.DecryptOption(targetFilePath, Setup.PrivateKey, @$"{Setup.AbsolutePath}\invalidpath",false));
         }
 
         [Fact]
@@ -119,12 +113,8 @@ namespace RSAEncryption.Tests.Main
             Setup.Initialize(out var testFolders);
             Setup.SetEncryptedFiles(testFolders);
 
-            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\priv.key.pem", true);
-
-            Assert.NotNull(key);
-
             Assert.Throws<ArgumentNullException>(()
-                => Program.DecryptOption("", key, testFolders["encrypted"], false));
+                => Program.DecryptOption("", Setup.PrivateKey, testFolders["encrypted"], false));
         }
 
         [Fact]
@@ -146,12 +136,12 @@ namespace RSAEncryption.Tests.Main
             Setup.SetEncryptedFiles(testFolders);
 
             string targetFilePath = Directory.GetFiles(testFolders["encrypted"])[0];
-            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\pub.key.pem", false);
+            var key = EncryptionPairKey.ImportPEMFile($@"{Setup.AbsolutePath}\pub.key.pem");
 
             Assert.NotNull(key);
 
             Assert.Throws<InvalidOperationException>(()
-                => Program.DecryptOption(targetFilePath, key, testFolders["decrypted"], false));
+                => Program.DecryptOption(targetFilePath, Setup.PublicKey, testFolders["decrypted"], false));
         }
     }
 }

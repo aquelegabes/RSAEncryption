@@ -16,7 +16,7 @@ namespace RSAEncryption.Tests.Main
             Setup.SetSignatureFile(testFolders);
 
             string output = testFolders["encrypted"];
-            var pubKey = Encryption.EncryptionPairKey.FromPEMFile($"{Setup.AbsolutePath}\\pub.key.pem");
+            var pubKey = Encryption.EncryptionPairKey.ImportPEMFile($"{Setup.AbsolutePath}\\pub.key.pem");
             string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["original"])[0]);
             string originalFilePath = Directory.GetFiles(testFolders["original"])[0];
             string signatureFilePath = Directory.GetFiles(testFolders["encrypted"], $"*{fileName}.SHA256*")[0];
@@ -56,13 +56,12 @@ namespace RSAEncryption.Tests.Main
             Setup.SetSignatureFile(testFolders);
 
             string output = testFolders["encrypted"];
-            var pubKey = Encryption.EncryptionPairKey.FromPEMFile($"{Setup.AbsolutePath}\\pub.key.pem");
             string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["original"])[0]);
             string originalFilePath = Directory.GetFiles(testFolders["original"])[0];
             string signatureFilePath = Directory.GetFiles(testFolders["encrypted"], $"*{fileName}.SHA256*")[0];
 
             Assert.Throws<InvalidDataException>(()
-                => Program.MergeSignatureAndData(originalFilePath, originalFilePath, output, pubKey));
+                => Program.MergeSignatureAndData(originalFilePath, originalFilePath, output, Setup.PublicKey));
         }
 
         [Fact]
@@ -73,7 +72,7 @@ namespace RSAEncryption.Tests.Main
             Setup.SetSignatureFile(testFolders);
 
             string output = testFolders["encrypted"];
-            var pubKey = $"{Setup.AbsolutePath}\\pub.key.pem";
+            var publicKeyPath = $"{Setup.AbsolutePath}\\pub.key.pem";
             string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["original"])[0]);
             string originalFilePath = Directory.GetFiles(testFolders["original"])[0];
             string signatureFilePath = Directory.GetFiles(testFolders["encrypted"], $"*{fileName}.{hashalg}*")[0];
@@ -82,7 +81,7 @@ namespace RSAEncryption.Tests.Main
             {
                 "--merge", "--verbose", $"--hashalg={hashalg}",
                 $"--output={output}",
-                $"--publickey={pubKey}",
+                $"--key={publicKeyPath}",
                 $"--target={originalFilePath}",
                 $"--signaturefile={signatureFilePath}",
             };

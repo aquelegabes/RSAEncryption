@@ -14,35 +14,123 @@ namespace RSAEncryption.Extensions
         /// Import OpenSSH PEM private/public key string into MS <see cref="RSACryptoServiceProvider" />
         /// </summary>
         /// <param name="pem">Encoded byte string from PEM file</param>
-        /// <param name="includePrivate">true includes private key, otherwise false</param>
         /// <returns></returns>
-        public static EncryptionPairKey ImportKey(this RSACryptoServiceProvider csp, string pem, bool includePrivate = false)
+        public static EncryptionPairKey ImportKey(this RSACryptoServiceProvider csp, string pem)
         {
-            PemReader pr = new PemReader(new StringReader(pem));
+            RSAParameters rsaParams = default;
 
-            RSAParameters rsaParams;
-            if (includePrivate)
+            try
             {
+                var pr = new PemReader(new StringReader(pem));
                 AsymmetricCipherKeyPair KeyPair = (AsymmetricCipherKeyPair)pr.ReadObject();
                 rsaParams = DotNetUtilities
                     .ToRSAParameters((RsaPrivateCrtKeyParameters)KeyPair.Private);
             }
-            else
-            {
+            catch (InvalidCastException)
+            {// if not private then public
+                var pr = new PemReader(new StringReader(pem));
                 AsymmetricKeyParameter publicKey = (AsymmetricKeyParameter)pr.ReadObject();
                 rsaParams = DotNetUtilities.ToRSAParameters((RsaKeyParameters)publicKey);
+            }
+            catch (Exception e)
+            {
+                if (e.Message.Contains("ENCRYPTED", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidCastException(
+                        message: "You're trying to use a encrypted key without a password.",
+                        errorCode: 11);
+                }
             }
 
             csp.ImportParameters(rsaParams);
 
-            if (csp.PublicOnly && includePrivate)
-                throw new InvalidOperationException(
-                    message: "Impossible to export private content from a public key.");
-
-            return new EncryptionPairKey(csp.KeySize, !includePrivate)
+            return new EncryptionPairKey(csp.KeySize, csp.PublicOnly)
             {
                 RSAParameters = rsaParams
             };
+        }
+
+        /// <summary>
+        /// Exports the current key in the PKCS#8 EncryptedPrivateKeyInfo format with a char-based password.
+        /// </summary>
+        /// <param name="csp"></param>
+        /// <param name="password">The password to use when encrypting the key material.</param>
+        /// <param name="pbeParameters">The password-based encryption (PBE) parameters to use when encrypting the key material.</param>
+        /// <returns cref="String">A PEMBase64 string containing the PKCS#8 EncryptedPrivateKeyInfo representation of this key.</returns>
+        /// <remarks>
+        /// When pbeParameters indicates an algorithm that uses PBKDF2 (Password-
+        /// Based Key Derivation Function 2), the password is converted to bytes via the
+        /// UTF-8 encoding.
+        /// </remarks>
+        /// <exception cref="CryptographicException">The key could not be exported.</exception>
+        public static string ExportEncryptedPkcs8PrivateKeyAsPEM(this RSACryptoServiceProvider csp, ReadOnlySpan<char> password, PbeParameters pbeParameters)
+        {
+            var result = csp.ExportEncryptedPkcs8PrivateKey(password, pbeParameters);
+            var base64 = Convert.ToBase64String(result).ToCharArray();
+            using (var sw = new StringWriter())
+            {
+                sw.Write("-----BEGIN ENCRYPTED PRIVATE KEY-----\n");
+                for (var i = 0; i < base64.Length; i += 64)
+                {
+                    sw.Write(base64, i, Math.Min(64, base64.Length - i));
+                    sw.Write('\n');
+                }
+                sw.Write("-----END ENCRYPTED PRIVATE KEY-----");
+                return sw.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Imports the public/private keypair from a PKCS#8 EncryptedPrivateKeyInfo
+        /// structure after decrypting with a char-based password, replacing the keys for
+        /// this object.
+        /// </summary>
+        /// <param name="password">The password to use for decrypting the key material.</param>
+        /// <param name="pemFile">The bytes of a PKCS#8 EncryptedPrivateKeyInfo structure in the from the <see cref="ExportEncryptedPkcs8PrivateKeyAsPEM"/> method.</param>
+        /// <param name="bytesRead">When this method returns, contains a value that indicates the number of bytes read from <paramref name="pemFile"/> . This parameter is treated as uninitialized.</param>
+        /// <exception cref="CryptographicException">The password is incorrect.</exception>
+        /// <remarks>
+        /// When the contents of source indicate an algorithm that uses PBKDF1 (Password-Based Key Derivation Function 1) or PBKDF2 (Password-Based Key Derivation Function 2), the password is converted to bytes via the UTF-8 encoding. This method only supports the binary(BER/CER/DER) encoding of EncryptedPrivateKeyInfo.If the value is Base64-encoded or in the PEM text format, the caller must Base64-decode the contents before calling this method.
+        /// </remarks>
+        public static void ImportEncryptedPkcs8PrivateKeyFromPEM(this RSACryptoServiceProvider csp,
+            ReadOnlySpan<char> password, StreamReader pemFile, out int bytesRead)
+        {
+            string fileContent = string.Empty;
+            char[] bufferHolder = new char[3];
+            while (!pemFile.EndOfStream)
+            {
+                string charHolder;
+                // loking for pem starter (MII)
+                while (string.IsNullOrWhiteSpace(fileContent))
+                {
+                    pemFile.Read(bufferHolder, 0, 3);
+                    charHolder = new string(bufferHolder);
+                    if (!charHolder.Equals("MII", StringComparison.OrdinalIgnoreCase))
+                    {
+                        pemFile.ReadLine();
+                    }
+                    else
+                    {
+                        fileContent += charHolder;
+                        fileContent += pemFile.ReadLine();
+                        break;
+                    }
+                }
+                // reading rest of file
+                pemFile.Read(bufferHolder, 0, 3);
+                charHolder = new string(bufferHolder);
+                // looking for the ending line
+                if (!charHolder.Equals("---", StringComparison.OrdinalIgnoreCase))
+                {
+                    fileContent += charHolder;
+                    fileContent += pemFile.ReadLine();
+                }
+                else break;
+            }
+
+            byte[] fromBase64 = Convert.FromBase64String(fileContent);
+
+            csp.ImportEncryptedPkcs8PrivateKey(password, fromBase64, out bytesRead);
         }
 
         /// <summary>
@@ -54,7 +142,7 @@ namespace RSAEncryption.Extensions
         public static string ExportPrivateKey(this RSACryptoServiceProvider csp)
         {
             StringWriter outputStream = new StringWriter();
-            if (csp.PublicOnly) throw new ArgumentException("CSP does not contain a private key", "csp");
+            if (csp.PublicOnly) throw new ArgumentException("CSP does not contain a private key", nameof(csp));
             var parameters = csp.ExportParameters(true);
             using (var stream = new MemoryStream())
             {

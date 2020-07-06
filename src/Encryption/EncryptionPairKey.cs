@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography;
+using Org.BouncyCastle.Crypto;
 using RSAEncryption.Extensions;
 
 namespace RSAEncryption.Encryption
@@ -23,6 +24,39 @@ namespace RSAEncryption.Encryption
         {
             KeySize = keySize;
             PublicOnly = publicOnly;
+        }
+        /// <summary>
+        /// Generate public and private <see cref="RSA" /> keys.
+        /// </summary>
+        /// <returns></returns>
+        /// <param name="keySize">The size of the key in bits. Default 2048.</param>
+        /// <exception cref="ArgumentException">Keysize outside of accepted sizes.</exception>
+        /// <exception cref="CryptographicException">Keysize outside of accepted sizes.</exception>
+        public static EncryptionPairKey New(int keySize = 2048)
+        {
+            if (keySize > 16384 && keySize < 384)
+                throw new ArgumentException(
+                    message: "Key size must be between 384 and 16384 bits.",
+                    paramName: nameof(keySize));
+
+            if (keySize % 8 != 0)
+                throw new CryptographicException(
+                    message: "Key size must in increments of 8 bits starting at 384.");
+
+            using (var rsa = new RSACryptoServiceProvider(keySize))
+            {
+                try
+                {
+                    return new EncryptionPairKey(keySize, rsa.PublicOnly)
+                    {
+                        RSAParameters = rsa.ExportParameters(true)
+                    };
+                }
+                finally
+                {
+                    rsa.PersistKeyInCsp = false;
+                }
+            }
         }
 
         /// <summary>
@@ -94,6 +128,8 @@ namespace RSAEncryption.Encryption
             outStreamEncrypted.FlushFinalBlock();
             outStreamEncrypted.Close();
             outStream.Flush();
+
+            rsa.PersistKeyInCsp = false;
             return outStream.ToArray();
         }
 
@@ -203,6 +239,7 @@ namespace RSAEncryption.Encryption
             inStream.Close();
             outStream.Flush();
 
+            rsa.PersistKeyInCsp = false;
             return outStream.ToArray();
         }
 
@@ -390,7 +427,7 @@ namespace RSAEncryption.Encryption
         /// <exception cref="ArgumentNullException">Directory not specified.</exception>
         /// <exception cref="ArgumentException">Directory not found.</exception>
         /// <exception cref="InvalidOperationException">Error when exporting key.</exception>
-        public void ToPEMFile(string path, string filename = "key", bool includePrivate = false)
+        public void ExportAsPEMFile(string path, string filename = "key", bool includePrivate = false)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentNullException(
@@ -409,18 +446,25 @@ namespace RSAEncryption.Encryption
 
             using (var rsa = new RSACryptoServiceProvider(this.KeySize))
             {
-                rsa.ImportParameters(this.RSAParameters);
-                if (includePrivate)
+                try
                 {
-                    filename = "priv." + filename + ".pem";
-                    string fileContent = rsa.ExportPrivateKey();
-                    FileManipulation.SaveFile(fileContent.ToByteArray(), path, filename, attributes: FileAttributes.ReadOnly);
+                    rsa.ImportParameters(this.RSAParameters);
+                    if (includePrivate)
+                    {
+                        filename = "priv." + filename + ".pem";
+                        string fileContent = rsa.ExportPrivateKey();
+                        FileManipulation.SaveFile(fileContent.ToByteArray(), path, filename, attributes: FileAttributes.ReadOnly);
+                    }
+                    else
+                    {
+                        filename = "pub." + filename + ".pem";
+                        string fileContent = rsa.ExportPublicKey();
+                        FileManipulation.SaveFile(fileContent.ToByteArray(), path, filename, attributes: FileAttributes.ReadOnly);
+                    }
                 }
-                else
+                finally
                 {
-                    filename = "pub." + filename + ".pem";
-                    string fileContent = rsa.ExportPublicKey();
-                    FileManipulation.SaveFile(fileContent.ToByteArray(), path, filename, attributes: FileAttributes.ReadOnly);
+                    rsa.PersistKeyInCsp = false;
                 }
             }
         }
@@ -430,7 +474,7 @@ namespace RSAEncryption.Encryption
         /// </summary>
         /// <param name="includePrivate">includePrivate: true to include the private key; default is false.</param>
         /// <returns></returns>
-        public string ToBlobString(bool includePrivate = false)
+        public string ExportAsBlobString(bool includePrivate = false)
         {
             if (PublicOnly && includePrivate)
                 throw new InvalidOperationException(
@@ -438,38 +482,55 @@ namespace RSAEncryption.Encryption
 
             using (var rsa = new RSACryptoServiceProvider(this.KeySize))
             {
-                rsa.ImportParameters(this.RSAParameters);
-                var blob = rsa.ExportCspBlob(includePrivate);
-                return Convert.ToBase64String(blob);
+                try
+                {
+                    rsa.ImportParameters(this.RSAParameters);
+                    var blob = rsa.ExportCspBlob(includePrivate);
+                    return Convert.ToBase64String(blob);
+                }
+                finally
+                {
+                    rsa.PersistKeyInCsp = false;
+                }
             }
         }
 
         /// <summary>
-        /// Generate public and private <see cref="RSA" /> keys.
+        /// Export an <see cref="EncryptionPairKey"/> as a pfx file using a password./>
         /// </summary>
-        /// <returns></returns>
-        /// <param name="keySize">The size of the key in bits. Default 2048.</param>
-        /// <exception cref="ArgumentException">Keysize outside of accepted sizes.</exception>
-        /// <exception cref="CryptographicException">Keysize outside of accepted sizes.</exception>
-        public static EncryptionPairKey New(int keySize = 2048)
+        /// <param name="password">password to encrypt key.</param>
+        /// <param name="path">output path</param>
+        /// <param name="filename">output file name</param>
+        /// <exception cref="ArgumentNullException">Password or path are missing.</exception>
+        /// <exception cref="ArgumentException">File not found.</exception>
+        /// <exception cref="InvalidOperationException">Impossible to export as pfx using a public key.</exception>
+        /// <exception cref="CryptographicException">Password is incorrect.</exception>
+        public void ExportAsPKCS8(string password, string path, string filename = "key")
         {
-            if (keySize > 16384 && keySize < 512)
+            if (string.IsNullOrWhiteSpace(password))
                 throw new ArgumentException(
-                    message: "Key size must be between 512 and 16384 bits.",
-                    paramName: nameof(keySize));
+                    paramName: nameof(password),
+                    message: "In order to export as PKCS8 a password is needed.");
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentNullException(
+                    paramName: nameof(path),
+                    message: "Directory not specified.");
 
-            if (keySize % 8 != 0)
-                throw new CryptographicException(
-                    message: "Key size must in increments of 8 bits starting at 384.");
+            if (this.PublicOnly)
+                throw new InvalidOperationException(
+                    message: "Must be a private key to export as PKCS8.");
 
-            using (var rsa = new RSACryptoServiceProvider(keySize))
+            filename += ".p8e";
+            using (var rsa = new RSACryptoServiceProvider(this.KeySize))
             {
                 try
                 {
-                    return new EncryptionPairKey(keySize, rsa.PublicOnly)
-                    {
-                        RSAParameters = rsa.ExportParameters(true)
-                    };
+                    rsa.ImportParameters(this.RSAParameters);
+                    var hashalg = new HashAlgorithmName("SHA1");
+                    var pbe = new PbeParameters(PbeEncryptionAlgorithm.Aes256Cbc, hashalg, 64);
+                    string fileContent = rsa.ExportEncryptedPkcs8PrivateKeyAsPEM(password, pbe);
+
+                    FileManipulation.SaveFile(fileContent.ToByteArray(), path, filename, attributes: FileAttributes.ReadOnly);
                 }
                 finally
                 {
@@ -482,12 +543,11 @@ namespace RSAEncryption.Encryption
         /// Import a <see cref="EncryptionPairKey"/> from a PEM file.
         /// </summary>
         /// <param name="path">Where the pem file is located.</param>
-        /// <param name="includePrivate">Is it a prviate key, otherwise false.</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">Directory not specified.</exception>
         /// <exception cref="ArgumentException">Directory not found.</exception>
         /// <exception cref="InvalidCastException">Wasn't possible to import key.</exception>
-        public static EncryptionPairKey FromPEMFile(string path, bool includePrivate = false)
+        public static EncryptionPairKey ImportPEMFile(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentNullException(
@@ -497,12 +557,19 @@ namespace RSAEncryption.Encryption
             if (!File.Exists(path))
                 throw new ArgumentException(
                     paramName: nameof(path),
-                    message: "Directory not found.");
+                    message: "File not found.");
 
             using (var rsa = new RSACryptoServiceProvider())
             {
-                FileManipulation.OpenFile(path, out byte[] content);
-                return rsa.ImportKey(content.AsEncodedString(), includePrivate);
+                try
+                {
+                    FileManipulation.OpenFile(path, out byte[] content);
+                    return rsa.ImportKey(content.AsEncodedString());
+                }
+                finally
+                {
+                    rsa.PersistKeyInCsp = false;
+                }
             }
         }
 
@@ -515,7 +582,7 @@ namespace RSAEncryption.Encryption
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">blobKey is null.</exception>
         /// <exception cref="InvalidCastException">Wasn't possible to import key.</exception>
-        public static EncryptionPairKey FromBlobString(string blobKey, int keySize, bool includePrivate = false)
+        public static EncryptionPairKey ImportBlobString(string blobKey, bool includePrivate = false)
         {
             if (string.IsNullOrWhiteSpace(blobKey))
                 throw new ArgumentNullException(
@@ -523,13 +590,13 @@ namespace RSAEncryption.Encryption
                     paramName: nameof(blobKey)
                 );
 
-            using (var rsa = new RSACryptoServiceProvider(keySize))
+            using (var rsa = new RSACryptoServiceProvider())
             {
                 try
                 {
                     var blob = Convert.FromBase64String(blobKey);
                     rsa.ImportCspBlob(blob);
-                    return new EncryptionPairKey(keySize, !includePrivate)
+                    return new EncryptionPairKey(rsa.KeySize, rsa.PublicOnly)
                     {
                         RSAParameters = rsa.ExportParameters(includePrivate)
                     };
@@ -541,6 +608,51 @@ namespace RSAEncryption.Encryption
                         message: "Could not import key.",
                         innerException: ex
                     );
+                }
+                finally
+                {
+                    rsa.PersistKeyInCsp = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Import a <see cref="EncryptionPairKey"/> from a pfx file.
+        /// </summary>
+        /// <param name="password">password used to encrypt the file.</param>
+        /// <param name="path">path to pfx file.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException">Password is missing./File not found.</exception>
+        /// <exception cref="ArgumentNullException">Path is null.</exception>
+        public static EncryptionPairKey ImportPKCS8(string password, string path)
+        {
+            if (string.IsNullOrWhiteSpace(password))
+                throw new ArgumentException(
+                    paramName: nameof(password),
+                    message: "In order to export as PFX a password is needed.");
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentNullException(
+                    paramName: nameof(path),
+                    message: "Path must not be null.");
+
+            if (!File.Exists(path))
+                throw new ArgumentException(
+                    paramName: nameof(path),
+                    message: "File not found.");
+
+            using (var rsa = new RSACryptoServiceProvider())
+            {
+                try
+                {
+                    using (var pemFile = new StreamReader(path))
+                    {
+                        rsa.ImportEncryptedPkcs8PrivateKeyFromPEM(password, pemFile, out int bytesRead);
+
+                        return new EncryptionPairKey(rsa.KeySize, rsa.PublicOnly)
+                        {
+                            RSAParameters = rsa.ExportParameters(true)
+                        };
+                    }
                 }
                 finally
                 {

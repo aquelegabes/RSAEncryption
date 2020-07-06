@@ -12,7 +12,27 @@ namespace RSAEncryption.Tests
         public readonly static string OriginalPath = Path.Combine(Environment.CurrentDirectory, "original");
         public readonly static string EncryptedPath = Path.Combine(Environment.CurrentDirectory, "encrypted");
         public readonly static string DecryptedPath = Path.Combine(Environment.CurrentDirectory, "decrypted");
-        public static EncryptionPairKey Key;
+
+        private static EncryptionPairKey _pubkey;
+        private static EncryptionPairKey _privkey;
+        public static EncryptionPairKey PublicKey
+        {
+            get { return _pubkey; }
+            set
+            {
+                if (_pubkey == null)
+                    _pubkey = value;
+            }
+        }
+        public static EncryptionPairKey PrivateKey
+        {
+            get { return _privkey; }
+            set
+            {
+                if (_privkey == null)
+                    _privkey = value;
+            }
+        }
 
         public static void Initialize(out Dictionary<string, string> testFolders)
         {
@@ -53,11 +73,12 @@ namespace RSAEncryption.Tests
             if (!File.Exists(pubKey) && !File.Exists(privKey))
             {
                 var key = EncryptionPairKey.New(2048);
-                key.ToPEMFile(AbsolutePath, includePrivate: false);
-                key.ToPEMFile(AbsolutePath, includePrivate: true);
+                key.ExportAsPEMFile(AbsolutePath, includePrivate: false);
+                key.ExportAsPEMFile(AbsolutePath, includePrivate: true);
             }
 
-            Key = EncryptionPairKey.FromPEMFile(@$"{AbsolutePath}\priv.key.pem", true);
+            PrivateKey = EncryptionPairKey.ImportPEMFile(@$"{AbsolutePath}\priv.key.pem");
+            PublicKey = EncryptionPairKey.ImportPEMFile(@$"{AbsolutePath}\pub.key.pem");
         }
 
         public static void SetEncryptedFiles(Dictionary<string, string> testFolders, bool multiple = false)
@@ -74,7 +95,7 @@ namespace RSAEncryption.Tests
                 string encryptedFileName = Path.GetFileNameWithoutExtension(filePath) + ".encrypted.txt";
                 string encryptedPathFile = Path.Combine(testFolders["encrypted"], encryptedFileName);
 
-                byte[] encryptedFile = Key.EncryptRijndael(originalFile);
+                byte[] encryptedFile = PrivateKey.EncryptRijndael(originalFile);
                 File.WriteAllBytes(encryptedPathFile, encryptedFile);
                 i++;
             } while (i < (multiple ? files : 1));
@@ -90,7 +111,7 @@ namespace RSAEncryption.Tests
             FileManipulation.OpenFile(filePath, out var originalFile);
 
             string output = Path.Combine(testFolders["encrypted"], $"{fileName}.{hashalg}{fileExt}");
-            var signatureData = Key.SignData(originalFile, hashalg);
+            var signatureData = PrivateKey.SignData(originalFile, hashalg);
             File.WriteAllBytes(output, signatureData);
         }
 

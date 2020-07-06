@@ -18,16 +18,15 @@ namespace RSAEncryption.Tests.Main
             Setup.SetMergedFile(testFolders, hashalg);
 
             string output = testFolders["encrypted"];
-            var pubKey = Encryption.EncryptionPairKey.FromPEMFile($"{Setup.AbsolutePath}\\pub.key.pem");
-            string mergedFilePath = Directory.GetFiles(testFolders["encrypted"], $"*merge*")[0];
+            string mergedFilePath = Directory.GetFiles(testFolders["encrypted"], "*merge*")[0];
 
             // invalid target
             Assert.Throws<ArgumentException>(()
-                => Program.UnmergeSignatureAndData(null, output, pubKey, hashalg));
+                => Program.UnmergeSignatureAndData(null, output, Setup.PrivateKey, hashalg));
 
             // invalid output
             Assert.Throws<ArgumentException>(()
-                => Program.UnmergeSignatureAndData(mergedFilePath, null, pubKey, hashalg));
+                => Program.UnmergeSignatureAndData(mergedFilePath, null, Setup.PrivateKey, hashalg));
         }
 
         [Fact]
@@ -53,12 +52,11 @@ namespace RSAEncryption.Tests.Main
             Setup.SetMergedFile(testFolders, hashalg);
 
             string output = testFolders["encrypted"];
-            var privateKey = Encryption.EncryptionPairKey.FromPEMFile($"{Setup.AbsolutePath}\\priv.key.pem", true);
             // not a merged file
             string mergedFilePath = Directory.GetFiles(testFolders["encrypted"])[0];
 
             Assert.Throws<InvalidDataException>(()
-                => Program.UnmergeSignatureAndData(mergedFilePath, output, privateKey, hashalg));
+                => Program.UnmergeSignatureAndData(mergedFilePath, output, Setup.PrivateKey, hashalg));
         }
 
         [Fact]
@@ -69,9 +67,9 @@ namespace RSAEncryption.Tests.Main
             Setup.SetMergedFile(testFolders, hashalg);
 
             string output = testFolders["encrypted"];
-            string publicKey = $"{Setup.AbsolutePath}\\pub.key.pem";
+            string keyPath = $"{Setup.AbsolutePath}\\pub.key.pem";
             string mergedFilePath = Directory.GetFiles(testFolders["encrypted"], "*merge*")[0];
-            string mergedFileName = Path.GetFileNameWithoutExtension(mergedFilePath);
+            string mergedFileName = Path.GetFileNameWithoutExtension(mergedFilePath).Replace(".merged","");
 
             var args = new string[]
             {
@@ -79,7 +77,7 @@ namespace RSAEncryption.Tests.Main
                 $"--output={output}",
                 $"--hashalg={hashalg}",
                 $"--target={mergedFilePath}",
-                $"--publickey={publicKey}"
+                $"--key={keyPath}"
             };
 
             Program.Main(args);

@@ -24,18 +24,17 @@ namespace RSAEncryption.Tests.Main
             string[] args =
             {
                 "-v", $"--hashalg={hashalg}", "--verbose",
-                $@"--publickey={Setup.AbsolutePath}\pub.key.pem",
+                $@"--key={Setup.AbsolutePath}\pub.key.pem",
                 $"--target={originalFilePath}",
                 $"--signaturefile={signatureFilePath}"
             };
 
             Program.Main(args);
 
-            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\pub.key.pem");
             FileManipulation.OpenFile(originalFilePath, out var originalFile);
             FileManipulation.OpenFile(signatureFilePath, out var signatureFile);
 
-            Assert.True(key.VerifySignedData(originalFile, signatureFile, hashalg));
+            Assert.True(Setup.PublicKey.VerifySignedData(originalFile, signatureFile, hashalg));
         }
 
         [Fact]
@@ -52,18 +51,17 @@ namespace RSAEncryption.Tests.Main
             string[] args =
             {
                 "-v", $"--hashalg={hashalg}", "--verbose",
-                $@"--publickey={Setup.AbsolutePath}\pub.key.pem",
+                $@"--key={Setup.AbsolutePath}\pub.key.pem",
                 $"--target={originalFilePath}",
                 $"--signaturefile={signatureFilePath}"
             };
 
             Program.Main(args);
 
-            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\pub.key.pem");
             FileManipulation.OpenFile(originalFilePath, out var originalFile);
             FileManipulation.OpenFile(signatureFilePath, out var signatureFile);
 
-            Assert.True(!key.VerifySignedData(originalFile, signatureFile, hashalg));
+            Assert.True(!Setup.PublicKey.VerifySignedData(originalFile, signatureFile, hashalg));
         }
 
         [Fact]
@@ -73,14 +71,12 @@ namespace RSAEncryption.Tests.Main
             Setup.Initialize(out var testFolders);
             Setup.SetSignatureFile(testFolders, hashalg);
 
-            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\pub.key.pem", false);
-
             string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["encrypted"], "*encrypt*")[0].Replace(".encrypted", ""));
             string originalFilePath = Directory.GetFiles(testFolders["original"], $"*{fileName}*").Last();
             string signatureFilePath = Directory.GetFiles(testFolders["encrypted"], $"*{fileName}.SHA256*")[0];
 
             Assert.Throws<ArgumentNullException>(()
-                => Program.VerifySignature("", signatureFilePath, key, false));
+                => Program.VerifySignature("", signatureFilePath, Setup.PublicKey, false));
         }
 
         [Fact]
@@ -90,14 +86,12 @@ namespace RSAEncryption.Tests.Main
             Setup.Initialize(out var testFolders);
             Setup.SetSignatureFile(testFolders, hashalg);
 
-            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\pub.key.pem", false);
-
             string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["encrypted"], "*encrypt*")[0].Replace(".encrypted", ""));
             string originalFilePath = Directory.GetFiles(testFolders["original"], $"*{fileName}*").Last();
             string signatureFilePath = Directory.GetFiles(testFolders["encrypted"], $"*{fileName}.SHA256*")[0];
 
             Assert.Throws<ArgumentNullException>(()
-                => Program.VerifySignature(originalFilePath, "", key, false));
+                => Program.VerifySignature(originalFilePath, "", Setup.PublicKey, false));
         }
 
         [Fact]
@@ -106,8 +100,6 @@ namespace RSAEncryption.Tests.Main
             string hashalg = "SHA256";
             Setup.Initialize(out var testFolders);
             Setup.SetSignatureFile(testFolders, hashalg);
-
-            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\pub.key.pem", false);
 
             string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["encrypted"], "*encrypt*")[0].Replace(".encrypted", ""));
             string originalFilePath = Directory.GetFiles(testFolders["original"], $"*{fileName}*").Last();
@@ -124,14 +116,12 @@ namespace RSAEncryption.Tests.Main
             Setup.Initialize(out var testFolders);
             Setup.SetSignatureFile(testFolders, hashalg);
 
-            var key = EncryptionPairKey.FromPEMFile($@"{Setup.AbsolutePath}\pub.key.pem", false);
-
             string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["encrypted"], "*encrypt*")[0].Replace(".encrypted", ""));
             string originalFilePath = Directory.GetFiles(testFolders["original"], $"*{fileName}*").Last();
             string signatureFilePath = Directory.GetFiles(testFolders["encrypted"], $"*{fileName}.SHA256*")[0];
 
             Assert.Throws<ArgumentException>(()
-                => Program.VerifySignature("inexistent", signatureFilePath, key, false));
+                => Program.VerifySignature("inexistent", signatureFilePath, Setup.PublicKey, false));
         }
     }
 }

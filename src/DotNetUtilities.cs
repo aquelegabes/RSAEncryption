@@ -46,7 +46,7 @@ namespace RSAEncryption
                 return bs;
 
             if (bs.Length > size)
-                throw new ArgumentException("Specified size too small", "size");
+                throw new ArgumentException("Specified size too small", nameof(size));
 
             byte[] padded = new byte[size];
             Array.Copy(bs, 0, padded, size - bs.Length, bs.Length);
