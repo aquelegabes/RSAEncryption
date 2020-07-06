@@ -1,7 +1,6 @@
 ﻿using RSAEncryption.Encryption;
 using System;
 using System.IO;
-using System.Linq;
 using Xunit;
 
 namespace RSAEncryption.Tests.Main
@@ -136,7 +135,7 @@ namespace RSAEncryption.Tests.Main
             Setup.SetEncryptedFiles(testFolders);
 
             string targetFilePath = Directory.GetFiles(testFolders["encrypted"])[0];
-            var key = EncryptionPairKey.ImportPEMFile($@"{Setup.AbsolutePath}\pub.key.pem");
+            var key = EncryptionKeyPair.ImportPEMFile($@"{Setup.AbsolutePath}\pub.key.pem");
 
             Assert.NotNull(key);
 

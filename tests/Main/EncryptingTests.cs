@@ -1,7 +1,5 @@
-﻿using RSAEncryption.Encryption;
-using System;
+﻿using System;
 using System.IO;
-using System.Linq;
 using Xunit;
 
 namespace RSAEncryption.Tests.Main

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Security.Cryptography;
-using System.Text;
+﻿using System.IO;
 using Xunit;
 
 namespace RSAEncryption.Tests.Main
@@ -38,10 +34,24 @@ namespace RSAEncryption.Tests.Main
             string privateKeyPath = Path.Combine(Setup.AbsolutePath, "priv.key.pem");
             string publicKeyPath = Path.Combine(Setup.AbsolutePath, "pub.key.pem");
 
-            Program.GenerateKey(1024, false, Setup.AbsolutePath);
+            Program.GenerateKey(2048, true, Setup.AbsolutePath);
 
             Assert.True(File.Exists(privateKeyPath));
             Assert.True(File.Exists(publicKeyPath));
+        }
+
+        [Theory]
+        [InlineData("2uto64", "enckey1")]
+        [InlineData("10oik6", "enckey2")]
+        public void GenerateKey_Encrypted_Verbosity_OK(string passwd, string keyName)
+        {
+            string encFile = Path.Combine(Setup.AbsolutePath, $"enc.{keyName}.pem");
+            string pubFile = Path.Combine(Setup.AbsolutePath, $"pub.{keyName}.pem");
+
+            Program.GenerateKey(2048, true, Setup.AbsolutePath, keyName, passwd);
+
+            Assert.True(File.Exists(encFile));
+            Assert.True(File.Exists(pubFile));
         }
     }
 }

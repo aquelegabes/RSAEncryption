@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography;
-using Org.BouncyCastle.Crypto;
 using RSAEncryption.Extensions;
 
 namespace RSAEncryption.Encryption
@@ -9,7 +8,7 @@ namespace RSAEncryption.Encryption
     /// <summary>
     /// Class responsible for encryption keys and it's methods.
     /// </summary>
-    public class EncryptionPairKey
+    public class EncryptionKeyPair
     {
         public RSAParameters RSAParameters { get; internal set; }
         public int KeySize { get; }
@@ -19,8 +18,8 @@ namespace RSAEncryption.Encryption
         /// Constructor responsible for setting the key size in bits.
         /// </summary>
         /// <param name="keySize">The key size in bits.</param>
-        /// <param name=""
-        internal EncryptionPairKey(int keySize, bool publicOnly)
+        /// <param name="publicOnly">Is the key public only?</param>
+        internal EncryptionKeyPair(int keySize, bool publicOnly)
         {
             KeySize = keySize;
             PublicOnly = publicOnly;
@@ -32,7 +31,7 @@ namespace RSAEncryption.Encryption
         /// <param name="keySize">The size of the key in bits. Default 2048.</param>
         /// <exception cref="ArgumentException">Keysize outside of accepted sizes.</exception>
         /// <exception cref="CryptographicException">Keysize outside of accepted sizes.</exception>
-        public static EncryptionPairKey New(int keySize = 2048)
+        public static EncryptionKeyPair New(int keySize = 2048)
         {
             if (keySize > 16384 && keySize < 384)
                 throw new ArgumentException(
@@ -47,7 +46,7 @@ namespace RSAEncryption.Encryption
             {
                 try
                 {
-                    return new EncryptionPairKey(keySize, rsa.PublicOnly)
+                    return new EncryptionKeyPair(keySize, rsa.PublicOnly)
                     {
                         RSAParameters = rsa.ExportParameters(true)
                     };
@@ -416,7 +415,7 @@ namespace RSAEncryption.Encryption
         }
 
         /// <summary>
-        /// Export this <see cref="EncryptionPairKey"/> into a PEM file.
+        /// Export this <see cref="EncryptionKeyPair"/> into a PEM file.
         /// </summary>
         /// <param name="path">Only path name. DO NOT include filename.</param>
         /// <param name="filename">
@@ -452,13 +451,13 @@ namespace RSAEncryption.Encryption
                     if (includePrivate)
                     {
                         filename = "priv." + filename + ".pem";
-                        string fileContent = rsa.ExportPrivateKey();
+                        string fileContent = rsa.ExportRSAPrivateKeyAsPEM();
                         FileManipulation.SaveFile(fileContent.ToByteArray(), path, filename, attributes: FileAttributes.ReadOnly);
                     }
                     else
                     {
                         filename = "pub." + filename + ".pem";
-                        string fileContent = rsa.ExportPublicKey();
+                        string fileContent = rsa.ExportRSAPublicKeyAsPEM();
                         FileManipulation.SaveFile(fileContent.ToByteArray(), path, filename, attributes: FileAttributes.ReadOnly);
                     }
                 }
@@ -470,7 +469,7 @@ namespace RSAEncryption.Encryption
         }
 
         /// <summary>
-        /// Convert an <see cref="EncryptionPairKey" /> as a blob string.
+        /// Convert an <see cref="EncryptionKeyPair" /> as a blob string.
         /// </summary>
         /// <param name="includePrivate">includePrivate: true to include the private key; default is false.</param>
         /// <returns></returns>
@@ -496,21 +495,21 @@ namespace RSAEncryption.Encryption
         }
 
         /// <summary>
-        /// Export an <see cref="EncryptionPairKey"/> as a pfx file using a password./>
+        /// Export an <see cref="EncryptionKeyPair"/> as an encrypted key using a password./>
         /// </summary>
         /// <param name="password">password to encrypt key.</param>
         /// <param name="path">output path</param>
         /// <param name="filename">output file name</param>
         /// <exception cref="ArgumentNullException">Password or path are missing.</exception>
         /// <exception cref="ArgumentException">File not found.</exception>
-        /// <exception cref="InvalidOperationException">Impossible to export as pfx using a public key.</exception>
+        /// <exception cref="InvalidOperationException">Impossible to export as encrypted key when public only.</exception>
         /// <exception cref="CryptographicException">Password is incorrect.</exception>
         public void ExportAsPKCS8(string password, string path, string filename = "key")
         {
             if (string.IsNullOrWhiteSpace(password))
                 throw new ArgumentException(
                     paramName: nameof(password),
-                    message: "In order to export as PKCS8 a password is needed.");
+                    message: "In order to export as an encrypted key a password is needed.");
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentNullException(
                     paramName: nameof(path),
@@ -518,9 +517,10 @@ namespace RSAEncryption.Encryption
 
             if (this.PublicOnly)
                 throw new InvalidOperationException(
-                    message: "Must be a private key to export as PKCS8.");
+                    message: "Must be a private key to export as an encrypted key.");
 
-            filename += ".p8e";
+            filename = $"enc.{filename}.pem";
+
             using (var rsa = new RSACryptoServiceProvider(this.KeySize))
             {
                 try
@@ -540,14 +540,14 @@ namespace RSAEncryption.Encryption
         }
 
         /// <summary>
-        /// Import a <see cref="EncryptionPairKey"/> from a PEM file.
+        /// Import a <see cref="EncryptionKeyPair"/> from a PEM file.
         /// </summary>
         /// <param name="path">Where the pem file is located.</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">Directory not specified.</exception>
         /// <exception cref="ArgumentException">Directory not found.</exception>
         /// <exception cref="InvalidCastException">Wasn't possible to import key.</exception>
-        public static EncryptionPairKey ImportPEMFile(string path)
+        public static EncryptionKeyPair ImportPEMFile(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentNullException(
@@ -564,7 +564,7 @@ namespace RSAEncryption.Encryption
                 try
                 {
                     FileManipulation.OpenFile(path, out byte[] content);
-                    return rsa.ImportKey(content.AsEncodedString());
+                    return rsa.ImportRSAKeyPEM(content.AsEncodedString());
                 }
                 finally
                 {
@@ -574,7 +574,7 @@ namespace RSAEncryption.Encryption
         }
 
         /// <summary>
-        /// Import an <see cref="EncryptionPairKey" /> as a blob string.
+        /// Import an <see cref="EncryptionKeyPair" /> as a blob string.
         /// </summary>
         /// <param name="blobKey">A valid blob key</param>
         /// <param name="keySize">The size of the key in bits.</param>
@@ -582,7 +582,7 @@ namespace RSAEncryption.Encryption
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">blobKey is null.</exception>
         /// <exception cref="InvalidCastException">Wasn't possible to import key.</exception>
-        public static EncryptionPairKey ImportBlobString(string blobKey, bool includePrivate = false)
+        public static EncryptionKeyPair ImportBlobString(string blobKey, bool includePrivate = false)
         {
             if (string.IsNullOrWhiteSpace(blobKey))
                 throw new ArgumentNullException(
@@ -596,7 +596,7 @@ namespace RSAEncryption.Encryption
                 {
                     var blob = Convert.FromBase64String(blobKey);
                     rsa.ImportCspBlob(blob);
-                    return new EncryptionPairKey(rsa.KeySize, rsa.PublicOnly)
+                    return new EncryptionKeyPair(rsa.KeySize, rsa.PublicOnly)
                     {
                         RSAParameters = rsa.ExportParameters(includePrivate)
                     };
@@ -617,19 +617,19 @@ namespace RSAEncryption.Encryption
         }
 
         /// <summary>
-        /// Import a <see cref="EncryptionPairKey"/> from a pfx file.
+        /// Import a <see cref="EncryptionKeyPair"/> from an encrypted key.
         /// </summary>
-        /// <param name="password">password used to encrypt the file.</param>
-        /// <param name="path">path to pfx file.</param>
+        /// <param name="password">password used to encrypt the key.</param>
+        /// <param name="path">path to encrypted key file.</param>
         /// <returns></returns>
         /// <exception cref="ArgumentException">Password is missing./File not found.</exception>
         /// <exception cref="ArgumentNullException">Path is null.</exception>
-        public static EncryptionPairKey ImportPKCS8(string password, string path)
+        public static EncryptionKeyPair ImportPKCS8(string password, string path)
         {
             if (string.IsNullOrWhiteSpace(password))
                 throw new ArgumentException(
                     paramName: nameof(password),
-                    message: "In order to export as PFX a password is needed.");
+                    message: "In order to export as an encrypted key a password is needed.");
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentNullException(
                     paramName: nameof(path),
@@ -648,7 +648,7 @@ namespace RSAEncryption.Encryption
                     {
                         rsa.ImportEncryptedPkcs8PrivateKeyFromPEM(password, pemFile, out int bytesRead);
 
-                        return new EncryptionPairKey(rsa.KeySize, rsa.PublicOnly)
+                        return new EncryptionKeyPair(rsa.KeySize, rsa.PublicOnly)
                         {
                             RSAParameters = rsa.ExportParameters(true)
                         };

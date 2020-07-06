@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using Xunit;
 
 namespace RSAEncryption.Tests.Main
@@ -16,7 +13,7 @@ namespace RSAEncryption.Tests.Main
             Setup.SetSignatureFile(testFolders);
 
             string output = testFolders["encrypted"];
-            var pubKey = Encryption.EncryptionPairKey.ImportPEMFile($"{Setup.AbsolutePath}\\pub.key.pem");
+            var pubKey = Encryption.EncryptionKeyPair.ImportPEMFile($"{Setup.AbsolutePath}\\pub.key.pem");
             string fileName = Path.GetFileNameWithoutExtension(Directory.GetFiles(testFolders["original"])[0]);
             string originalFilePath = Directory.GetFiles(testFolders["original"])[0];
             string signatureFilePath = Directory.GetFiles(testFolders["encrypted"], $"*{fileName}.SHA256*")[0];

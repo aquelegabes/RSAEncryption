@@ -6,12 +6,14 @@
 </p>
 
 ## Usage: rsaencryption [OPTIONS]
-##### Encrypts, decrypts, sign or verifies signature on files. Encrypt files using [Rijndael](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) encryption algorithm using [RSA keys](https://en.wikipedia.org/wiki/RSA_(cryptosystem)).
-##### Note: When signing, check [some hash algorithm names.](https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.hashalgorithmname?view=netcore-3.1#remarks)
+##### Generates key pair and encrypted key pair.
+##### Encrypts, decrypts, sign or verify signatures.
+##### [Rijndael](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) encryption algorithm using [RSA key pair](https://en.wikipedia.org/wiki/RSA_(cryptosystem)).
+##### Check some [hashing algorithm names](https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.hashalgorithmname?view=netcore-3.1#remarks).
 ##### Note: When encrypting or decrypting ```--target``` can be used to specify a directory instead of a single file.
 ##### Note: If no output is specified, the default output path is [Environment.CurrentDirectory](https://docs.microsoft.com/en-us/dotnet/api/system.environment.currentdirectory?view=netcore-3.1).
 ##### Note: Recommendation is that files are no larger than 10mb, cause it'll take longer.
-##### Note: When using decrypt *on a directory it searches for files that contains ```.encrypted``` on it's name.*
+##### Note: When using decrypt *on a directory it searches for files that contains ```.encrypted``` on its names.*
 ##### Note: Key size **MUST** be between 384 and 16384 bits in sizes incremented by 8, e.g.: 512, 520, 528 etc.
 
 ### Options:
@@ -34,11 +36,15 @@
 ```
 ```
   -m, --merge                 merge signature and original data, use --signaturefile,
-                                  requires public key used in signature
+                                  warns if no key was specified
                                   [ACTION]
 ```
 ```
   -o, --output=VALUE          path to output files
+```
+```
+  -p, --password              when generating/using a new key use this flag to set password.
+                                  when using this flag must always be a private key.
 ```
 ```
   -s, --sign                  signs data, requires private key 
@@ -95,35 +101,37 @@
                                   [ACTION]
 ```
 ### Examples:
-* Encrypting and signing:
+* Encrypting:
 ```
-  rsaencryption -e -s --target=.\\myfile.pdf --publickey=.\\pub.key.pem --privatekey=\\priv.key.pem
-        Sign data (using private key) then encrypts (using public key) merging 
-            signature and data using default output
+  [rsaencryption -e -t=.\\myfile.pdf -k=.\\pub.key.pem]
+        Encrypts target data using default output.
 ```
 * Decrypting:
 ```
-  rsaencryption -d --target=.\\myfile.encrypted.pdf --output=.\\ --privatekey=.\\priv.key.pem --verbose
-        Decrypts specified file on specified output using selected key 
-            with increased verbosity
-```
-* Generating new key:
- ```
-  rsaencryption --newkey -o=.\
-        Generates a new key with default name and size at selected path
+  [rsaencryption -d -t=.\\myfile.encrypted.pdf -o=.\\ -k=.\\priv.key.pem --verbose]
+        Decrypts specified file on specified output using selected key
+            with increase verbosity.
 ```
 * Generating new key with chosen size and name:
 ```
-  rsaencryption -n --keysize=1024 --keyfilename=my_1024_key -o=.\
-        Generates a new key with specified name and size at selected path
+  [rsaencryption -n --keysize=1024 --keyfilename=my_1024_key -o=.]
+        Generates a new key with specified name and size at selected path.
 ```
-* Signing only:
+* Generating new encrypted key
 ```
-  rsaencryption  --sign --target=.\\myfile.docx --privatekey=.\\priv.key.pem --hashalg=SHA384
-        Signs the specified file using default output with specified private key and selected hash algorithm
+  [rsaencryption -n -p]
+        Generates a new encrypted key using default values.
+```
+* Signing:
+```
+  [rsaencryption -s --hashalg=SHA512 -t=.\\myfile.docx -k=.\\priv.key.pem]
+        Signs the selected file using default output with specified private
+            key and chosen hashing algorithm. (if hash algorithm not chosen
+            default will be SHA256)
 ```
 * Verifying signature: 
 ```
-  rsaencryption -v --target=.\\myfile.txt --signaturefile=.\\myfile.signature.txt --publickey=.\\pub.key.pem
-        Checks if signature file is valid
+  [rsaencryption -v --hashalg=SHA512 -t=.\\myfile.txt --signaturefile=.\\myfile.signature.txt -k=.\\pub.key.pem]
+        Checks if signature file is valid. (if hash algorithm not chosen
+            default will be SHA256)
 ```

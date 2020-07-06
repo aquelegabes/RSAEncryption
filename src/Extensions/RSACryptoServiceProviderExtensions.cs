@@ -15,7 +15,7 @@ namespace RSAEncryption.Extensions
         /// </summary>
         /// <param name="pem">Encoded byte string from PEM file</param>
         /// <returns></returns>
-        public static EncryptionPairKey ImportKey(this RSACryptoServiceProvider csp, string pem)
+        public static EncryptionKeyPair ImportRSAKeyPEM(this RSACryptoServiceProvider csp, string pem)
         {
             RSAParameters rsaParams = default;
 
@@ -44,7 +44,7 @@ namespace RSAEncryption.Extensions
 
             csp.ImportParameters(rsaParams);
 
-            return new EncryptionPairKey(csp.KeySize, csp.PublicOnly)
+            return new EncryptionKeyPair(csp.KeySize, csp.PublicOnly)
             {
                 RSAParameters = rsaParams
             };
@@ -95,42 +95,50 @@ namespace RSAEncryption.Extensions
         public static void ImportEncryptedPkcs8PrivateKeyFromPEM(this RSACryptoServiceProvider csp,
             ReadOnlySpan<char> password, StreamReader pemFile, out int bytesRead)
         {
-            string fileContent = string.Empty;
-            char[] bufferHolder = new char[3];
-            while (!pemFile.EndOfStream)
+            try
             {
-                string charHolder;
-                // loking for pem starter (MII)
-                while (string.IsNullOrWhiteSpace(fileContent))
+                string fileContent = string.Empty;
+                char[] bufferHolder = new char[3];
+                while (!pemFile.EndOfStream)
                 {
+                    string charHolder;
+                    // loking for pem starter (MII)
+                    while (string.IsNullOrWhiteSpace(fileContent))
+                    {
+                        pemFile.Read(bufferHolder, 0, 3);
+                        charHolder = new string(bufferHolder);
+                        if (!charHolder.Equals("MII", StringComparison.OrdinalIgnoreCase))
+                        {
+                            pemFile.ReadLine();
+                        }
+                        else
+                        {
+                            fileContent += charHolder;
+                            fileContent += pemFile.ReadLine();
+                            break;
+                        }
+                    }
+                    // reading rest of file
                     pemFile.Read(bufferHolder, 0, 3);
                     charHolder = new string(bufferHolder);
-                    if (!charHolder.Equals("MII", StringComparison.OrdinalIgnoreCase))
-                    {
-                        pemFile.ReadLine();
-                    }
-                    else
+                    // looking for the ending line
+                    if (!charHolder.Equals("---", StringComparison.OrdinalIgnoreCase))
                     {
                         fileContent += charHolder;
                         fileContent += pemFile.ReadLine();
-                        break;
                     }
+                    else break;
                 }
-                // reading rest of file
-                pemFile.Read(bufferHolder, 0, 3);
-                charHolder = new string(bufferHolder);
-                // looking for the ending line
-                if (!charHolder.Equals("---", StringComparison.OrdinalIgnoreCase))
-                {
-                    fileContent += charHolder;
-                    fileContent += pemFile.ReadLine();
-                }
-                else break;
+
+                byte[] fromBase64 = Convert.FromBase64String(fileContent);
+
+                csp.ImportEncryptedPkcs8PrivateKey(password, fromBase64, out bytesRead);
             }
-
-            byte[] fromBase64 = Convert.FromBase64String(fileContent);
-
-            csp.ImportEncryptedPkcs8PrivateKey(password, fromBase64, out bytesRead);
+            catch (Exception e)
+            {
+                throw new CryptographicException(
+                    message: "Not a valid PKCS#8 key.");
+            }
         }
 
         /// <summary>
@@ -139,7 +147,7 @@ namespace RSAEncryption.Extensions
         /// </summary>
         /// <param name="csp"></param>
         /// <returns></returns>
-        public static string ExportPrivateKey(this RSACryptoServiceProvider csp)
+        public static string ExportRSAPrivateKeyAsPEM(this RSACryptoServiceProvider csp)
         {
             StringWriter outputStream = new StringWriter();
             if (csp.PublicOnly) throw new ArgumentException("CSP does not contain a private key", nameof(csp));
@@ -186,7 +194,7 @@ namespace RSAEncryption.Extensions
         /// </summary>
         /// <param name="csp"></param>
         /// <returns></returns>
-        public static string ExportPublicKey(this RSACryptoServiceProvider csp)
+        public static string ExportRSAPublicKeyAsPEM(this RSACryptoServiceProvider csp)
         {
             StringWriter outputStream = new StringWriter();
             var parameters = csp.ExportParameters(false);

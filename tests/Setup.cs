@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace RSAEncryption.Tests
 {
@@ -13,9 +12,9 @@ namespace RSAEncryption.Tests
         public readonly static string EncryptedPath = Path.Combine(Environment.CurrentDirectory, "encrypted");
         public readonly static string DecryptedPath = Path.Combine(Environment.CurrentDirectory, "decrypted");
 
-        private static EncryptionPairKey _pubkey;
-        private static EncryptionPairKey _privkey;
-        public static EncryptionPairKey PublicKey
+        private static EncryptionKeyPair _pubkey;
+        private static EncryptionKeyPair _privkey;
+        public static EncryptionKeyPair PublicKey
         {
             get { return _pubkey; }
             set
@@ -24,7 +23,7 @@ namespace RSAEncryption.Tests
                     _pubkey = value;
             }
         }
-        public static EncryptionPairKey PrivateKey
+        public static EncryptionKeyPair PrivateKey
         {
             get { return _privkey; }
             set
@@ -72,13 +71,13 @@ namespace RSAEncryption.Tests
 
             if (!File.Exists(pubKey) && !File.Exists(privKey))
             {
-                var key = EncryptionPairKey.New(2048);
+                var key = EncryptionKeyPair.New(2048);
                 key.ExportAsPEMFile(AbsolutePath, includePrivate: false);
                 key.ExportAsPEMFile(AbsolutePath, includePrivate: true);
             }
 
-            PrivateKey = EncryptionPairKey.ImportPEMFile(@$"{AbsolutePath}\priv.key.pem");
-            PublicKey = EncryptionPairKey.ImportPEMFile(@$"{AbsolutePath}\pub.key.pem");
+            PrivateKey = EncryptionKeyPair.ImportPEMFile(@$"{AbsolutePath}\priv.key.pem");
+            PublicKey = EncryptionKeyPair.ImportPEMFile(@$"{AbsolutePath}\pub.key.pem");
         }
 
         public static void SetEncryptedFiles(Dictionary<string, string> testFolders, bool multiple = false)

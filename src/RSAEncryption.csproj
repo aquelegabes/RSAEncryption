@@ -17,16 +17,21 @@ MIT License</Description>
     <RepositoryUrl>https://github.com/gabesantos1/RSAEncryption.git</RepositoryUrl>
     <PackageProjectUrl>https://github.com/gabesantos1/RSAEncryption</PackageProjectUrl>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>release v1:
-    - Encrypts/decrypts single, multiple files
-    - Sign encrypted data
-    - Checks for a valid signature
-    - Generate a new RSA key</PackageReleaseNotes>
+    <PackageReleaseNotes>release v1.1.0:
+- renamed some args params
+- removed sign and encrypt as one option
+- minor optimizations update
+- signature files now has its algorithm name on the outputted file
+- moved warning on hashing algorithms to show only when used
+- fixed typo when generating new key
+- added portable version (net core 3.1 needed)
+- option to generate encrypted keys (password required)</PackageReleaseNotes>
     <PackageTags>encryption privacy</PackageTags>
     <SignAssembly>true</SignAssembly>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <AssemblyOriginatorKeyFile>rsaencryption_keyFile.pfx</AssemblyOriginatorKeyFile>
     <DelaySign>false</DelaySign>
+    <RepositoryType>Public</RepositoryType>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

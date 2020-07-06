@@ -2,10 +2,14 @@
   "profiles": {
     "RSAEncryption": {
       "commandName": "Project",
-      //"commandLineArgs": "-n -p -o=.\\debugging"
+      "commandLineArgs": "-n -p -o=.\\debugging"
       //"commandLineArgs": "-n -o=.\\debugging"
-      "commandLineArgs": "-v -p --hashalg=SHA256 --target=.\\debugging\\t.mp4 --signaturefile=.\\debugging\\t.SHA256.mp4 --key=.\\debugging\\key.p8e"
-      //"commandLineArgs": "-s -p --hashalg=SHA256 -t=.\\debugging\\t.mp4 -k=.\\debugging\\key.p8e -o=.\\debugging"
+      //"commandLineArgs": "-v --hashalg=SHA256 --target=.\\debugging\\t.mp4 --signaturefile=.\\debugging\\t.SHA256.mp4 --key=.\\debugging\\pub.key.pem"
+      //"commandLineArgs": "-s -p --hashalg=SHA256 -t=.\\debugging\\t.mp4 -k=.\\debugging\\enc.key.pem -o=.\\debugging"
+      //"commandLineArgs": "-m -t=.\\debugging\\t.mp4 --signaturefile=.\\debugging\\t.SHA256.mp4 -o=.\\debugging"
+      //"commandLineArgs": "-u -k=.\\debugging\\pub.key.pem -t=.\\debugging\\t.merged.decrypted.mp4 -o=.\\debugging"
+      //"commandLineArgs": "-e -k=.\\debugging\\pub.key.pem -t=.\\debugging\\t.merged.mp4 -o=.\\debugging"
+      //"commandLineArgs": "-d -p -k=.\\debugging\\enc.key.pem -t=.\\debugging\\t.merged.encrypted.mp4 -o=.\\debugging"
     }
   }
 }
