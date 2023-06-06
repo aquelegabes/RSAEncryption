@@ -1,5 +1,6 @@
 public class ConsoleParameters
 {
+    private string _keyFileName = "sample.key";
     private EConsoleActions _action = EConsoleActions.None;
 
     public bool IsAction => _action != EConsoleActions.None;
@@ -16,17 +17,19 @@ public class ConsoleParameters
     public bool Examples { get => _action == EConsoleActions.Examples; set => _action = EConsoleActions.Examples; }
     public bool Version { get => _action == EConsoleActions.Version; set => _action = EConsoleActions.Version; }
     
+    public EncryptionKeyPair Key { get; set; } = EncryptionKeyPair.New();
+    public string KeyFileName { get; set; } = "";
     public string Output { get; set; }
         = Environment.CurrentDirectory;
-    public bool Password { get; set; } = false;
+    public string Password { get; set; } = "";
     public string Target { get; set; }
         = Path.Combine(Environment.CurrentDirectory, "sample");
     public string HashAlgorithm { get; set; } = "SHA256";
-    public string KeyFileName { get; set; } = "sample.key";
     public int KeySize { get; set; } = 2048;
     public string SignatureFile { get; set; } = "";
     public bool Verbose { get; set; } = false;
     public bool PasswordProtected { get; set; } = false;
+    public EConsoleActions GetCurrentAction() => _action;
 
     public OptionSet GetOptions()
     {
@@ -62,7 +65,7 @@ public class ConsoleParameters
             { "hashalg=", "type of hashing algorithm, examples: SHA1, SHA256. default value is SHA256",
                 v => this.HashAlgorithm = v },
             { "keyfilename=", "when generating a new key use this to choose file name, default is \"key\"",
-                v => this.KeyFileName = v) },
+                v => this.KeyFileName = v },
             { "keysize=", "when generating key use this to choose its size, minimum size is 384 and maximum is 16384, key size must be in increments of 8 bits.",
                 (int v) => this.KeySize = v },
             { "signaturefile=", "signature file generated based on encrypted file",
