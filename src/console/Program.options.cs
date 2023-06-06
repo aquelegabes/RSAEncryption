@@ -1,7 +1,7 @@
 namespace RSAEncryption.Console;
 public static partial class Program
 {
-        static void Decrypt(ConsoleParameters cParams)
+    static void Decrypt(ConsoleParameters cParams)
     {
         string fileName = Path.GetFileNameWithoutExtension(cParams.Target);
         fileName = fileName.Replace(".encrypted", "");
@@ -61,7 +61,9 @@ public static partial class Program
         Exec.WriteLine($"[*] File saved as \"{fileName}.encrypted{fileExt}\" at {cParams.Output}");
 
     }
-    static void GenerateKey(ConsoleParameters cParams)
+
+    // public due to test case TODO: refactor
+    public static void GenerateKey(ConsoleParameters cParams)
     {
         if (string.IsNullOrWhiteSpace(cParams.Output) || !Directory.Exists(cParams.Output))
             throw new ArgumentException(
@@ -111,7 +113,9 @@ public static partial class Program
             Exec.WriteLine($"[*] Elapsed time for export {_stopwatch.ElapsedMilliseconds}ms.");
         }
     }
-    static void Sign(ConsoleParameters cParams)
+
+    // public due to test case TODO: refactor
+    public static void Sign(ConsoleParameters cParams)
     {
         if (string.IsNullOrWhiteSpace(cParams.Output) || !Directory.Exists(cParams.Output))
             throw new ArgumentException(
@@ -158,7 +162,8 @@ public static partial class Program
         FileManipulation.SaveFile(signedData, cParams.Output, $"{fileName}.{cParams.HashAlgorithm}{fileExt}", true);
         Exec.WriteLine($"[*] File saved as \"{fileName}.{cParams.HashAlgorithm}{fileExt}\" at {cParams.Output}");
     }
-    static void VerifySignature(ConsoleParameters cParams)
+    // public due to test case TODO: refactor
+    public static void VerifySignature(ConsoleParameters cParams)
     {
         if (string.IsNullOrWhiteSpace(cParams.Target))
             throw new ArgumentNullException(
@@ -211,7 +216,9 @@ public static partial class Program
         else
             Exec.WriteLine($"[*] The file \"{fileName}\" do not contains a valid {cParams.HashAlgorithm} signature.");
     }
-    static void DecryptOption(ConsoleParameters cParameters)
+
+    // public due to test case TODO: refactor
+    public static void DecryptOption(ConsoleParameters cParameters)
     {
         if (string.IsNullOrWhiteSpace(cParameters.Output) || !Directory.Exists(cParameters.Output))
             throw new ArgumentException(
@@ -251,7 +258,9 @@ public static partial class Program
             throw new ArgumentException(message: "Target path is non-existent.");
         }
     }
-    static void EncryptOption(ConsoleParameters cParameters)
+
+    // public due to test case TODO: refactor
+    public static void EncryptOption(ConsoleParameters cParameters)
     {
         if (string.IsNullOrWhiteSpace(cParameters.Output) || !Directory.Exists(cParameters.Output))
             throw new ArgumentException(
@@ -288,7 +297,8 @@ public static partial class Program
             throw new ArgumentException(message: "Target path is non-existent.");
         }
     }
-    static string MergeSignatureAndData(ConsoleParameters cParameters)
+    // public due to test case TODO: refactor
+    public static string MergeSignatureAndData(ConsoleParameters cParameters)
     {
         if (string.IsNullOrWhiteSpace(cParameters.Target) || !File.Exists(cParameters.Target))
             throw new ArgumentException(
@@ -352,7 +362,9 @@ public static partial class Program
         FileManipulation.SaveFile(mergedFile, cParameters.Output, fileName + $".merged{fileExt}", true);
         return $"{cParameters.Output}\\{fileName}.merged{fileExt}";
     }
-    static void UnmergeSignatureAndData(ConsoleParameters cParameters)
+
+    // public due to test case TODO: refactor
+    public static void UnmergeSignatureAndData(ConsoleParameters cParameters)
     {
         if (!File.Exists(cParameters.Target) || string.IsNullOrWhiteSpace(cParameters.Target))
             throw new ArgumentException(

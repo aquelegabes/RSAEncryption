@@ -1,8 +1,9 @@
 ﻿namespace RSAEncryption.Console;
-static partial class Program
+public static partial class Program
 {
     private static readonly Stopwatch _stopwatch = new Stopwatch();
-    private static readonly string _exeName = Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
+    private static readonly string _exeName =
+        Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
 
     public static void Main(string[] args)
     {
@@ -59,10 +60,8 @@ static partial class Program
                     }
                 }
             }
-
-            if (string.IsNullOrWhiteSpace(cParams.KeyFileName))
-                cParams.Key = default;
-            else if (cParams.PasswordProtected)
+            
+            if (cParams.PasswordProtected)
                 cParams.Key = EncryptionKeyPair.ImportPKCS8(cParams.Password, cParams.KeyFileName);
             else
                 cParams.Key = EncryptionKeyPair.ImportPEMFile(cParams.KeyFileName);
