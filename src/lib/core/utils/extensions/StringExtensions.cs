@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace RSAEncryption.Extensions
+﻿namespace RSAEncryption.Core.Extensions
 {
     /// <summary>
     /// Extensions methods for <see cref="String" />.

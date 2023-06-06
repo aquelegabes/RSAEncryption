@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace RSAEncryption.Encryption
+﻿namespace RSAEncryption.Core.Encryption
 {
     public static class Encode
     {

@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace RSAEncryption
+﻿namespace RSAEncryption.Core.Utils
 {
     public static class FileManipulation
     {
@@ -10,7 +7,6 @@ namespace RSAEncryption
         /// </summary>
         /// <param name="path">Full path with filename</param>
         /// <param name="file">Outputs <see cref="FileStream"/> bytes.</param>
-        /// <returns></returns>
         /// <exception cref="NullReferenceException">Path is null.</exception>
         /// <exception cref="FileLoadException">Could not open file, check inner exception.</exception>
         public static void OpenFile(string path, out byte[] file)
@@ -42,7 +38,7 @@ namespace RSAEncryption
         /// <param name="nameWithExtension">File name with it's extension</param>
         /// <param name="overwriteFile">Overwrite existent file, otherwise false.</param>
         /// <param name="attributes">Attributes to add to file, otherwise <see cref="FileAttributes.Normal"/></param>
-        /// <returns></returns>
+        /// <returns><see cref="true"/> if file saved successfully, otherwise <see cref="false"/>.</returns>
         /// <exception cref="NullReferenceException">Any of the required parameters are null.</exception>
         /// <exception cref="IOException">Could not save file, check inner exception</exception>
         public static bool SaveFile(byte[] fileContent, string targetPath, string nameWithExtension,
@@ -90,11 +86,11 @@ namespace RSAEncryption
         /// Delete a specified file.
         /// </summary>
         /// <param name="filePath">Full path file.</param>
-        /// <returns></returns>
+        /// <returns><see cref="true"/> if deleted file, otherwise <see cref="false"/>.</returns>
         /// <exception cref="NullReferenceException">File path is null.</exception>
         /// <exception cref="ArgumentException">Path is not a valid file.</exception>
         /// <exception cref="IOException">Could not delete the file, check inner exception.</exception>
-        public static void DeleteFile(string filePath)
+        public static bool DeleteFile(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
                 throw new NullReferenceException("File path is required");
@@ -107,6 +103,7 @@ namespace RSAEncryption
             try
             {
                 File.Delete(filePath);
+                return true;
             }
             catch (Exception exe)
             {

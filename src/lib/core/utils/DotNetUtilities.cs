@@ -1,9 +1,8 @@
 ﻿using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Math;
-using System;
 using System.Security.Cryptography;
 
-namespace RSAEncryption
+namespace RSAEncryption.Core.Utils
 {
     public sealed class DotNetUtilities
     {

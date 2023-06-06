@@ -1,12 +1,9 @@
 ﻿using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.OpenSsl;
-using RSAEncryption.Encryption;
-using System;
-using System.IO;
 using System.Security.Cryptography;
 
-namespace RSAEncryption.Extensions
+namespace RSAEncryption.Core.Extensions
 {
     public static class RSACryptoServiceProviderExtensions
     {
@@ -134,7 +131,7 @@ namespace RSAEncryption.Extensions
 
                 csp.ImportEncryptedPkcs8PrivateKey(password, fromBase64, out bytesRead);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 throw new CryptographicException(
                     message: "Not a valid PKCS#8 key.");
@@ -150,7 +147,8 @@ namespace RSAEncryption.Extensions
         public static string ExportRSAPrivateKeyAsPEM(this RSACryptoServiceProvider csp)
         {
             StringWriter outputStream = new StringWriter();
-            if (csp.PublicOnly) throw new ArgumentException("CSP does not contain a private key", nameof(csp));
+            if (csp is null) throw new ArgumentNullException(message: "CSP parameter must not be null.", paramName: nameof(csp));
+            if (csp.PublicOnly) throw new ArgumentException("CSP does not contain a private key.", nameof(csp));
             var parameters = csp.ExportParameters(true);
             using (var stream = new MemoryStream())
             {
