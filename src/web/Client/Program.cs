@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using RSAEncryption.Web;
 
 namespace RSAEncryption.Web;
-
 public class Program
 {
     public static async Task Main(string[] args)
