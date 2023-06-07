@@ -1,13 +1,14 @@
 {
     "version": "2.0.0",
     "tasks": [
+        // BLAZOR
         {
             "label": "build",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/DataEncryption/RSAEncryption.csproj",
+                "${workspaceFolder}/src/web/RSAEncryption.Web.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -19,7 +20,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/DataEncryption/RSAEncryption.csproj",
+                "${workspaceFolder}/src/web/RSAEncryption.Web.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -32,9 +33,46 @@
             "args": [
                 "watch",
                 "run",
-                "${workspaceFolder}/DataEncryption/RSAEncryption.csproj",
+                "--project",
+                "${workspaceFolder}/src/web/RSAEncryption.Web.csproj"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+
+        // CONSOLE
+        {
+            "label": "build",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/console/RSAEncrpytion.Console.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "${workspaceFolder}/src/console/RSAEncrpytion.Console.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "watch",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "watch",
+                "run",
+                "--project",
+                "${workspaceFolder}/src/console/RSAEncrpytion.Console.csproj"
             ],
             "problemMatcher": "$msCompile"
         }
