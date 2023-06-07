@@ -1,4 +1,5 @@
-public class Signature : ComponentBase
+namespace RSAEncryption.Web.Pages;
+public partial class Signature : ComponentBase
 {
     
 }

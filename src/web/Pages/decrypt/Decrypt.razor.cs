@@ -1,4 +1,5 @@
-public class Decrypt : ComponentBase
+namespace RSAEncryption.Web.Pages;
+public partial class Decrypt : ComponentBase
 {
 
 }

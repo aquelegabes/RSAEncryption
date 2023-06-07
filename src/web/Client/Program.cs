@@ -11,6 +11,10 @@ public class Program
         builder.RootComponents.Add<App>("#app");
         builder.RootComponents.Add<HeadOutlet>("head::after");
 
+        builder.Services.AddScoped<KeyService>();
+        builder.Services.AddScoped<EncryptService>();
+        builder.Services.AddScoped<DecryptService>();
+        builder.Services.AddScoped<SignatureService>();
         builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
         await builder.Build().RunAsync();

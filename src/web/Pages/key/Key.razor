@@ -1,4 +1,7 @@
+@namespace RSAEncryption.Web.Pages
 @page "/key"
 
-@inherits Key
-@inject KeyService
+<input type="text" placeholder="file key name" @bind="KeyFileName"/>
+<input type="password" placeholder="key password" @bind="KeyPassword"/>
+<input type="text" placeholder="file size" @bind="KeySize"/>
+<button @onclick="GenerateKey"></button>
