@@ -5,8 +5,9 @@ public partial class Key : ComponentBase
     public string KeyPassword { get; set; } = "";
     public int KeySize { get; set; } = 2048;
 
-    public async Task GenerateKey()
-    {
-        throw new NotImplementedException();
-    }
+    [Inject]
+    private KeyService _keyService { get; set; }
+
+    public async Task GenerateKey() =>
+        await _keyService.NewKey(KeyFileName, KeyPassword, KeySize);
 }
