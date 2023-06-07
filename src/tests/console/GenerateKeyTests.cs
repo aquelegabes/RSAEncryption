@@ -1,4 +1,5 @@
-﻿public class GenerateKeyTests
+﻿namespace RSAEncryption.Console.Test;
+public class GenerateKeyTests
 {
     [Theory]
     [InlineData("key_2048", 2048)]

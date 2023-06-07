@@ -1,4 +1,5 @@
-﻿public class DecryptingTests
+﻿namespace RSAEncryption.Console.Test;
+public class DecryptingTests
 {
     [Fact]
     public void Main_Decrypting_SingleFile_Verbosity_OK()

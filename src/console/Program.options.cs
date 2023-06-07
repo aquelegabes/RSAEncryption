@@ -90,16 +90,15 @@ public static partial class Program
 
         newKey.ExportAsPEMFile(cParams.Output, cParams.KeyFileName, false);
 
-        if (!hasPasswd)
-        {
-            if (cParams.Verbose) Exec.WriteLine("[*] Exporting private key...");
-            newKey.ExportAsPEMFile(cParams.Output, cParams.KeyFileName, true);
-        }
-
         if (hasPasswd)
         {
             Exec.WriteLine("[*] Exporting encrypted key pair...");
             newKey.ExportAsPKCS8(cParams.Password, cParams.Output, cParams.KeyFileName);
+        }
+        else
+        {
+            if (cParams.Verbose) Exec.WriteLine("[*] Exporting private key...");
+            newKey.ExportAsPEMFile(cParams.Output, cParams.KeyFileName, true);
         }
 
         Exec.WriteLine($"[*] Key pair generated and exported to {cParams.Output}...");
@@ -249,6 +248,7 @@ public static partial class Program
             var pathFiles = Directory.GetFiles(cParameters.Target, "*encrypt*");
             for (int i = 0; i < pathFiles.Length; i++)
             {
+                cParameters.Target = pathFiles[i];
                 Exec.WriteLine($"[*] Decrypting {i + 1} out of {pathFiles.Length} file(s).");
                 Decrypt(cParameters);
             }
@@ -287,6 +287,7 @@ public static partial class Program
             var pathFiles = Directory.GetFiles(cParameters.Target);
             for (int i = 0; i < pathFiles.Length; i++)
             {
+                cParameters.Target = pathFiles[i];
                 Exec.WriteLine($"[*] Encrypting {i + 1} out of {pathFiles.Length} file(s).");
 
                 Encrypt(cParameters);
@@ -312,7 +313,13 @@ public static partial class Program
             throw new ArgumentException(
                 message: "Invalid output path.",
                 paramName: nameof(cParameters.Output));
-        if (cParameters.Key == null)
+        if (cParameters.Key is null && cParameters.PasswordProtected == false)
+            throw new ArgumentNullException(
+                paramName: nameof(cParameters.Key), 
+                message: "Key must not be null.");
+
+        if (cParameters.Key == null
+            && cParameters.PasswordProtected)
         {
             Exec.WriteLine("[*] Warning: Key not set, application can't verify signature file.");
             Exec.Write("[*] Do you want to continue? (y/n)");

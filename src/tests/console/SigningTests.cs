@@ -1,4 +1,5 @@
-﻿public class SigningTests
+﻿namespace RSAEncryption.Console.Test;
+public class SigningTests
 {
     [Fact]
     public void Main_Signing_Verbosity_OK()

@@ -1,4 +1,5 @@
-﻿public class UnmergeTests
+﻿namespace RSAEncryption.Console.Test; 
+public class UnmergeTests
 {
     [Fact]
     public void Unmerge_ArgumentExc()

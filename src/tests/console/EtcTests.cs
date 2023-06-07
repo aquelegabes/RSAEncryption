@@ -1,4 +1,5 @@
-﻿public class EtcTests
+﻿namespace RSAEncryption.Console.Test;
+public class EtcTests
 {
     [Fact]
     public void Main_ShowHelp()

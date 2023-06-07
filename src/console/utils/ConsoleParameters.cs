@@ -1,6 +1,5 @@
 public class ConsoleParameters
 {
-    private string _keyFileName = "sample.key";
     private EConsoleActions _action = EConsoleActions.None;
 
     public bool IsAction => _action != EConsoleActions.None;

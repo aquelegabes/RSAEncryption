@@ -1,4 +1,5 @@
-﻿public class MergeTests
+﻿namespace RSAEncryption.Console.Test;
+public class MergeTests
 {
     [Fact]
     public void Merge_ArgumentExc()
@@ -66,7 +67,7 @@
             Output = output,
         };
 
-        Assert.Throws<NullReferenceException>(()
+        Assert.Throws<ArgumentNullException>(()
             => Program.MergeSignatureAndData(cParams));
     }
 

@@ -60,11 +60,19 @@ public static partial class Program
                     }
                 }
             }
-            
-            if (cParams.PasswordProtected)
-                cParams.Key = EncryptionKeyPair.ImportPKCS8(cParams.Password, cParams.KeyFileName);
+
+            if (cParams.NewKey)
+            {
+                GenerateKey(cParams);
+                return;
+            }
             else
-                cParams.Key = EncryptionKeyPair.ImportPEMFile(cParams.KeyFileName);
+            {
+                if (cParams.PasswordProtected)
+                    cParams.Key = EncryptionKeyPair.ImportPKCS8(cParams.Password, cParams.KeyFileName);
+                else
+                    cParams.Key = EncryptionKeyPair.ImportPEMFile(cParams.KeyFileName);
+            }
 
             if (cParams.GetCurrentAction() == EConsoleActions.Encrypt)
             {
@@ -95,11 +103,6 @@ public static partial class Program
             if (cParams.Unmerge)
             {
                 UnmergeSignatureAndData(cParams);
-                return;
-            }
-            if (cParams.NewKey)
-            {
-                GenerateKey(cParams);
                 return;
             }
         }

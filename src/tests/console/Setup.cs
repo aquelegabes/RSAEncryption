@@ -1,4 +1,5 @@
-﻿public static class Setup
+﻿namespace RSAEncryption.Console.Test;
+public static class Setup
 {
     public readonly static string AbsolutePath = Environment.CurrentDirectory;
     public readonly static string OriginalPath = Path.Combine(Environment.CurrentDirectory, "original");
