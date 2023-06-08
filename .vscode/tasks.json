@@ -3,7 +3,7 @@
     "tasks": [
         // RSAEncryption.Web
         {
-            "label": "build",
+            "label": "buildweb",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -15,7 +15,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish",
+            "label": "publishweb",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -27,7 +27,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "watch",
+            "label": "watchweb",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -40,7 +40,7 @@
         },
         // RSAEncryption.Console
         {
-            "label": "build",
+            "label": "buildconsole",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -52,7 +52,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish",
+            "label": "publishconsole",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -64,7 +64,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "watch",
+            "label": "watchconsole",
             "command": "dotnet",
             "type": "process",
             "args": [
