@@ -1,7 +1,7 @@
 {
     "version": "2.0.0",
     "tasks": [
-        // BLAZOR
+        // RSAEncryption.Web
         {
             "label": "build",
             "command": "dotnet",
@@ -38,8 +38,7 @@
             ],
             "problemMatcher": "$msCompile"
         },
-
-        // CONSOLE
+        // RSAEncryption.Console
         {
             "label": "build",
             "command": "dotnet",

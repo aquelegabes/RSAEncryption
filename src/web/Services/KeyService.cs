@@ -2,7 +2,12 @@ namespace RSAEncryption.Web.Services;
 
 public class KeyService
 {
-    protected EncryptionKeyPair Key { get; private set; }
+    public KeyService()
+    {
+        Key = EncryptionKeyPair.New(2048);
+    }
+
+    protected EncryptionKeyPair Key { get; set; }
 
     protected byte[] PEMPublicKeyAsByteArray()
         => Key.AsByteArray(EKeyType.PEM);
@@ -32,8 +37,7 @@ public class KeyService
 
     public string GetKey(
         EKeyType keyType,
-        ReadOnlySpan<char> keyPassword = default,
-        bool includePrivate = false)
+        ReadOnlySpan<char> keyPassword = default)
     {
         switch (keyType)
         {
@@ -47,7 +51,7 @@ public class KeyService
             }
             case EKeyType.PEM:
             {
-                return includePrivate ?
+                return !keyPassword.IsEmpty ?
                     this.PEMPrivateKeyAsByteArray(keyPassword).AsEncodedString()
                     : this.PEMPublicKeyAsByteArray().AsEncodedString();
             }
