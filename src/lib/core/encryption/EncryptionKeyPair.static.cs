@@ -28,25 +28,14 @@ namespace RSAEncryption.Core.Encryption
                     paramName: nameof(path),
                     message: "File not found.");
 
-            using (var rsa = new RSACryptoServiceProvider())
+            using (var reader = new StreamReader(path))
+            using (var memStream = new MemoryStream())
             {
-                try
-                {
-                    using (var pemFile = new StreamReader(path))
-                    {
-                        rsa.ImportEncryptedPkcs8PrivateKeyFromPEM(password, pemFile, out int bytesRead);
-
-                        return new EncryptionKeyPair(rsa.KeySize, rsa.PublicOnly)
-                        {
-                            RSAParameters = rsa.ExportParameters(true)
-                        };
-                    }
-                }
-                finally
-                {
-                    rsa.PersistKeyInCsp = false;
-                }
+                reader.BaseStream.CopyTo(memStream);
+                var content = memStream.ToArray();
+                return ImportKey(EKeyType.PKCS8, content, password);
             }
+
         }
 
         /// <summary>
@@ -66,30 +55,7 @@ namespace RSAEncryption.Core.Encryption
                     paramName: nameof(blobKey)
                 );
 
-            using (var rsa = new RSACryptoServiceProvider())
-            {
-                try
-                {
-                    var blob = Convert.FromBase64String(blobKey);
-                    rsa.ImportCspBlob(blob);
-                    return new EncryptionKeyPair(rsa.KeySize, rsa.PublicOnly)
-                    {
-                        RSAParameters = rsa.ExportParameters(includePrivate)
-                    };
-                }
-                catch (Exception ex)
-                {
-                    ex.Data["params"] = new { key = blobKey };
-                    throw new InvalidCastException(
-                        message: "Could not import key.",
-                        innerException: ex
-                    );
-                }
-                finally
-                {
-                    rsa.PersistKeyInCsp = false;
-                }
-            }
+            return ImportKey(EKeyType.BlobString, Convert.FromBase64String(blobKey));
         }
 
         /// <summary>
@@ -112,18 +78,8 @@ namespace RSAEncryption.Core.Encryption
                     paramName: nameof(path),
                     message: "File not found.");
 
-            using (var rsa = new RSACryptoServiceProvider())
-            {
-                try
-                {
-                    FileManipulation.OpenFile(path, out byte[] content);
-                    return rsa.ImportRSAKeyPEM(content.AsEncodedString());
-                }
-                finally
-                {
-                    rsa.PersistKeyInCsp = false;
-                }
-            }
+            FileManipulation.OpenFile(path, out byte[] content);
+            return ImportKey(EKeyType.PEM, content);
         }
 
         /// <summary>
@@ -131,8 +87,8 @@ namespace RSAEncryption.Core.Encryption
         /// </summary>
         /// <returns></returns>
         /// <param name="keySize">The size of the key in bits. Default 2048.</param>
-        /// <exception cref="ArgumentException">Keysize outside of accepted sizes.</exception>
-        /// <exception cref="CryptographicException">Keysize outside of accepted sizes.</exception>
+        /// <exception cref="ArgumentException">Key size outside of accepted sizes.</exception>
+        /// <exception cref="CryptographicException">Keys ize outside of accepted sizes.</exception>
         public static EncryptionKeyPair New(int keySize = 2048)
         {
             if (keySize > 16384 && keySize < 384)
@@ -157,6 +113,62 @@ namespace RSAEncryption.Core.Encryption
                 {
                     rsa.PersistKeyInCsp = false;
                 }
+            }
+        }
+
+        
+        public static EncryptionKeyPair ImportKey(
+            EKeyType keyType,
+            byte[] keyContent,
+            ReadOnlySpan<char> keyPassword = default)
+        {
+            using var rsa = new RSACryptoServiceProvider();
+
+            try
+            {
+                switch(keyType)
+                {
+                    case EKeyType.BlobString:
+                    {
+                        rsa.ImportCspBlob(keyContent);
+                        return new EncryptionKeyPair(rsa.KeySize, rsa.PublicOnly)
+                        {
+                            RSAParameters = rsa.ExportParameters(!keyPassword.IsEmpty)
+                        };
+                    }
+                    case EKeyType.PEM:
+                    {
+                        return keyPassword.IsEmpty ?
+                            rsa.ImportRSAKeyPEM(keyContent.AsEncodedString())
+                            : rsa.ImportRSAKeyPEM(keyContent.AsEncodedString());
+                    }
+                    case EKeyType.PKCS8:
+                    {
+                        rsa.ImportEncryptedPkcs8PrivateKeyFromPEM(
+                            keyPassword, keyContent, out int bytesRead);
+                        return new EncryptionKeyPair(rsa.KeySize, rsa.PublicOnly)
+                        {
+                            RSAParameters = rsa.ExportParameters(true)
+                        };
+                    }
+                    default:
+                        throw new ArgumentException(
+                            paramName: nameof(keyType),
+                            message: "Key type must be valid."
+                        );
+                }
+            }
+            catch (Exception ex)
+            {
+                ex.Data["params"] = new { key = keyContent };
+                throw new InvalidCastException(
+                    message: "Could not import key.",
+                    innerException: ex
+                );
+            }
+            finally
+            {
+                rsa.PersistKeyInCsp = false;
             }
         }
     }

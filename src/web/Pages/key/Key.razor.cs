@@ -8,6 +8,6 @@ public partial class Key : ComponentBase
     [Inject]
     private KeyService _keyService { get; set; }
 
-    public async Task GenerateKey() =>
-        await _keyService.NewKey(KeyFileName, KeyPassword, KeySize);
+    public void GenerateNewKey() =>
+        _keyService.NewKey(KeyPassword, KeySize);
 }

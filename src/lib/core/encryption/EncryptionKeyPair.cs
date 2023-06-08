@@ -21,7 +21,7 @@ namespace RSAEncryption.Core.Encryption
             KeySize = keySize;
             PublicOnly = publicOnly;
         }
-        
+
 
         /// <summary>
         /// Encrypts a file using a <see cref="RSACryptoServiceProvider"/> public key.
@@ -411,7 +411,7 @@ namespace RSAEncryption.Core.Encryption
                 throw new InvalidOperationException(
                     message: "Impossible to export private content from a public key.");
 
-            var fileContents = AsByteArray(EKeyType.PEM, includePrivate: includePrivate);
+            var fileContents = AsByteArray(EKeyType.PEM);
 
             filename = includePrivate ? "priv." + filename + ".pem" : "pub." + filename + ".pem";
 
@@ -431,7 +431,7 @@ namespace RSAEncryption.Core.Encryption
                     message: "Impossible to export private content from a public key.");
 
             return Convert.ToBase64String(
-                AsByteArray(EKeyType.BlobString, includePrivate: includePrivate));
+                AsByteArray(EKeyType.BlobString));
         }
 
         /// <summary>
@@ -459,57 +459,61 @@ namespace RSAEncryption.Core.Encryption
                 throw new InvalidOperationException(
                     message: "Must be a private key to export as an encrypted key.");
 
-            filename = $"enc.{filename}.pem";
+            filename = $"priv.{filename}.pem";
             var fileContents = AsByteArray(EKeyType.PKCS8, password);
 
-            FileManipulation.SaveFile(fileContents, path, filename, true);            
+            FileManipulation.SaveFile(fileContents, path, filename);
         }
 
         public byte[] AsByteArray(
             EKeyType keyType,
-            string password = "",
-            bool includePrivate = false)
+            ReadOnlySpan<char> password = default)
         {
-            if (keyType == EKeyType.PKCS8 && string.IsNullOrWhiteSpace(password))
-                throw new ArgumentNullException(
-                    paramName: nameof(password),
-                    message: "Password must not be null.");
+            bool includePrivate = !password.IsEmpty;
 
-            using var rsa = new RSACryptoServiceProvider(this.KeySize);
-            rsa.ImportParameters(this.RSAParameters);
-
-            try
+            using (var rsa = new RSACryptoServiceProvider(this.KeySize))
             {
-                switch(keyType)
+                try
                 {
-                    case EKeyType.PEM:
+                    rsa.ImportParameters(this.RSAParameters);
+                    switch (keyType)
                     {
-                        return includePrivate ?
-                             rsa.ExportRSAPrivateKeyAsPEM().ToByteArray()
-                             :  rsa.ExportRSAPublicKeyAsPEM().ToByteArray();
-                    }
-                    case EKeyType.BlobString:
-                    {
-                        return rsa.ExportCspBlob(includePrivate);
-                    }
-                    case EKeyType.PKCS8:
-                    {
-                        var hashalg = new HashAlgorithmName("SHA1");
-                        var pbe = new PbeParameters(PbeEncryptionAlgorithm.Aes256Cbc, hashalg, 64);
-                        string fileContent = rsa.ExportEncryptedPkcs8PrivateKeyAsPEM(password, pbe);
-                        return fileContent.ToByteArray();
-                    }
-                    default:
-                    {
-                        throw new ArgumentNullException(
-                            paramName: nameof(keyType),
-                            message: "Must be a valid KeyType.");
+                        case EKeyType.PEM:
+                        {
+                            return includePrivate ?
+                                rsa.ExportRSAPrivateKeyAsPEM().ToByteArray()
+                                : rsa.ExportRSAPublicKeyAsPEM().ToByteArray();
+                        }
+                        case EKeyType.BlobString:
+                        {
+                            return rsa.ExportCspBlob(includePrivate);
+                        }
+                        case EKeyType.PKCS8:
+                        {
+                            if (password.IsEmpty)
+                            {
+                                throw new ArgumentNullException(
+                                    paramName: nameof(password),
+                                    message: "This type of import requires a password.");
+                            }
+
+                            var hashalg = new HashAlgorithmName("SHA1");
+                            var pbe = new PbeParameters(PbeEncryptionAlgorithm.Aes256Cbc, hashalg, 64);
+                            string fileContent = rsa.ExportEncryptedPkcs8PrivateKeyAsPEM(password, pbe);
+                            return fileContent.ToByteArray();
+                        }
+                        default:
+                        {
+                            throw new ArgumentNullException(
+                                paramName: nameof(keyType),
+                                message: "Must be a valid KeyType.");
+                        }
                     }
                 }
-            }
-            finally
-            {
-                rsa.PersistKeyInCsp = false;
+                finally
+                {
+                    rsa.PersistKeyInCsp = false;
+                }
             }
         }
     }
